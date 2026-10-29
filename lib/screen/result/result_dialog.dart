@@ -452,13 +452,12 @@ class _ResultDialogState extends State<ResultDialog>
             ],
           ),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _amber.withValues(alpha: 0.40)),
         ),
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(

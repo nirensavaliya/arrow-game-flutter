@@ -27,6 +27,9 @@ class LevelGrid {
 
 typedef ShapeFn = bool Function(double x, double y);
 
+// Must match GameController.boardAspect. Used to size a board from a design.
+const double _boardAspect = 0.82;
+
 bool _ell(double x, double y, double cx, double cy, double rx, double ry) {
   if (rx <= 0 || ry <= 0) return false;
 
@@ -142,12 +145,23 @@ class LevelDesign {
     this._crisp,
   );
 
+  /// Builds a design from a shape function.
+  ///
+  /// When [targetCells] is given, the board size is NOT taken from
+  /// [preferredLongSide]. It is calculated from the real silhouette: its
+  /// filled area (holes included), its width and height. That way a thin or
+  /// wide design gets a bigger board than a solid one, so every design ends up
+  /// with about [targetCells] playable cells. The result is limited to
+  /// [minSide]..[maxSide].
   factory LevelDesign.shape(
     String name,
     String category,
     ShapeFn shape, {
     int preferredLongSide = 24,
     double extent = 1.3,
+    int? targetCells,
+    int minSide = 6,
+    int maxSide = 66,
   }) {
     const samples = 180;
     final step = extent * 2 / samples;
@@ -156,6 +170,7 @@ class LevelDesign {
     var maxX = -double.infinity;
     var minY = double.infinity;
     var maxY = -double.infinity;
+    var hits = 0;
 
     for (var row = 0; row < samples; row++) {
       final y = -extent + (row + 0.5) * step;
@@ -164,6 +179,8 @@ class LevelDesign {
         final x = -extent + (col + 0.5) * step;
 
         if (!shape(x, y)) continue;
+
+        hits++;
 
         minX = math.min(minX, x);
         maxX = math.max(maxX, x);
@@ -186,10 +203,28 @@ class LevelDesign {
       );
     }
 
+    var side = preferredLongSide;
+
+    if (targetCells != null && hits > 0) {
+      final w = maxX - minX + step;
+      final h = maxY - minY + step;
+      final area = hits * step * step;
+
+      // The long side of the board follows the wider (or taller) edge of the
+      // silhouette, the same way toGrid() picks its cell size.
+      final longDim = (w / h >= _boardAspect) ? w : h;
+
+      // 0.95: edge cells with partial coverage add a few extra cells.
+      side = (longDim * math.sqrt(targetCells * 0.95 / area))
+          .round()
+          .clamp(minSide, maxSide)
+          .toInt();
+    }
+
     return LevelDesign._(
       name,
       category,
-      preferredLongSide,
+      side,
       shape,
       minX - step / 2,
       maxX + step / 2,
@@ -547,13 +582,20 @@ class LevelDesign {
 //   Levels 26-30   Hard            animals with limbs / heads
 //   Levels 31-35   Hard            larger animals and objects
 //   Levels 36-40   Very Hard       complex silhouettes
-//   Levels 41-80   Expert          thin parts, many details, dense boards
+//   Levels 41-80   Expert          thin parts first, then denser, fuller
+//                                  silhouettes as the arrow count peaks
 //
-// Difficulty only goes up. Three things rise together on every level:
-//   1. the design itself (silhouettes are sorted simple -> complex),
-//   2. the arrow count (smooth curve, no sudden jumps),
-//   3. the board size and the interior holes (holes start at level 21 and
-//      grow gradually denser and bigger).
+// Difficulty only goes up. Three things are tied together on every level:
+//   1. the arrow count (smooth curve, no sudden jumps),
+//   2. the arrow size (longest allowed arrow grows with the level),
+//   3. the design size: the board is sized from the real silhouette (its
+//      area, width and height, holes included), so every design ends up with
+//      the number of playable cells that its arrow count and arrow size need.
+//      Thin or wide designs get a bigger board, solid designs a smaller one.
+//
+// Expert designs are ordered from thin to solid. Thin silhouettes sit where
+// the arrow count is still moderate, and the fullest silhouettes sit at the
+// end, where the arrow count peaks and the board needs the most cells.
 // =============================================================================
 
 class LevelDesigns {
@@ -568,6 +610,19 @@ class LevelDesigns {
 
   // Interior holes begin once the player is in the Medium-Hard tier.
   static const int _holesFromLevel = 21;
+
+  // Board limits (long side, in cells).
+  static const int _minSide = 6;
+  static const int _maxSide = 66;
+
+  // Average arrow length as a share of the longest allowed arrow. Follows the
+  // controller's 10% short / 55% medium / 35% long mix.
+  static const double _avgLengthShare = 0.62;
+
+  // Small extra room so the generator can fit every arrow, and a little more
+  // for Expert levels, whose thin parts waste some cells.
+  static const double _slack = 1.05;
+  static const double _expertSlack = 1.08;
 
   static bool isTutorial(int level) => level == 1;
 
@@ -642,28 +697,41 @@ class LevelDesigns {
         .toInt();
   }
 
-  /// Board size follows the arrow count, so early levels are small and
-  /// light, and the board only grows as the arrow count grows.
+  /// Longest allowed arrow, in cells. Same formula as the controller's
+  /// maximum arrow length (5 + level ~/ 4, from 5 to 12).
+  static int maxArrowLength(int level) {
+    final l = level.clamp(1, totalLevels).toInt();
+    return (5 + l ~/ 4).clamp(5, 12).toInt();
+  }
+
+  /// Playable cells a level needs: arrow count * average arrow length, plus
+  /// a little slack. Together with the real silhouette this decides how big
+  /// the board is.
+  static int targetCellsForLevel(int level) {
+    final l = level.clamp(1, totalLevels).toInt();
+
+    final arrows = arrowCountForLevel(l);
+    final avgLength = maxArrowLength(l) * _avgLengthShare;
+
+    final slack = l >= 41 ? _expertSlack : _slack;
+
+    return math.max(arrows * 2, (arrows * avgLength * slack).round());
+  }
+
+  /// Rough board size that does not know the silhouette. Kept as a fallback;
+  /// [forLevel] sizes the board from the real design instead.
   static int longSideForLevel(int level, String name) {
     final l = level.clamp(1, totalLevels).toInt();
 
     // Tutorial: 5 columns wide (3 arrows + 2 gap columns).
     if (l == 1) return 5;
 
-    final arrows = arrowCountForLevel(l);
-
-    // Matches the controller's maximum arrow length (5 + level ~/ 4).
-    final maxLen = (5 + l ~/ 4).clamp(5, 12).toInt();
-    final avgLen = maxLen * 0.65;
+    final cellsNeeded = targetCellsForLevel(l);
 
     // About 0.75 * side^2 playable cells on an average silhouette.
-    final cellsNeeded = arrows * avgLen;
-    var side = math.sqrt(cellsNeeded / 0.75).round();
+    final side = math.sqrt(cellsNeeded / 0.75).round();
 
-    // Detailed designs (levels 41+) need extra resolution.
-    if (l >= 41) side += 2;
-
-    return side.clamp(6, 66).toInt();
+    return side.clamp(_minSide, _maxSide).toInt();
   }
 
   // Thin or delicate silhouettes keep their natural shape (no holes).
@@ -711,7 +779,9 @@ class LevelDesigns {
   };
 
   // 79 designs: level 2 = index 0 ... level 80 = index 78.
-  // Sorted from the simplest silhouette to the most complex one.
+  // Levels 2-40 go from the simplest silhouette to complex ones. Levels 41-80
+  // go from the thinnest silhouettes to the fullest ones, so the board can
+  // hold the growing arrow count.
   static const List<(String, String)> _recipes = [
     // ---- Levels 2-6 (Easy): solid convex shapes ----
     ('Square', 'Shape'), // 2
@@ -760,47 +830,50 @@ class LevelDesigns {
     ('Hourglass', 'Object'), // 38
     ('Trophy', 'Object'), // 39
     ('Umbrella', 'Object'), // 40
-    // ---- Levels 41-80 (Expert): thin parts, details, dense boards ----
-    ('Cactus', 'Nature'), // 41
-    ('Chevron', 'Shape'), // 42
-    ('Bolt', 'Shape'), // 43
-    ('Ring', 'Shape'), // 44
-    ('Key', 'Object'), // 45
-    ('Sun', 'Nature'), // 46
-    ('Cog', 'Object'), // 47
-    ('Planet', 'Nature'), // 48
-    ('Paw Print', 'Animal'), // 49
-    ('Train', 'Object'), // 50
-    ('Dinosaur', 'Animal'), // 51
-    ('Fox', 'Animal'), // 52
-    ('Crab', 'Animal'), // 53
-    ('Balloon', 'Object'), // 54
-    ('Crystal', 'Shape'), // 55
-    ('Skull', 'Object'), // 56
-    ('Tulip', 'Nature'), // 57
-    ('Rose', 'Nature'), // 58
-    ('Temple', 'Object'), // 59
-    ('Windmill', 'Object'), // 60
-    ('Satellite', 'Object'), // 61
-    ('Starburst', 'Pattern'), // 62
-    ('Compass', 'Object'), // 63
-    ('Eagle', 'Animal'), // 64
-    ('Dragonfly', 'Animal'), // 65
-    ('Peacock', 'Animal'), // 66
-    ('Octopus', 'Animal'), // 67
-    ('Infinity', 'Pattern'), // 68
-    ('Spiral', 'Pattern'), // 69
-    ('Pagoda', 'Object'), // 70
-    ('Bridge', 'Object'), // 71
-    ('Telescope', 'Object'), // 72
-    ('Bicycle', 'Object'), // 73
-    ('Palm Tree', 'Nature'), // 74
-    ('Spider', 'Animal'), // 75
-    ('Snowflake', 'Nature'), // 76
-    ('Eiffel Tower', 'Object'), // 77
-    ('Mandala', 'Pattern'), // 78
-    ('Maze', 'Pattern'), // 79
-    ('Galaxy', 'Nature'), // 80
+    // ---- Levels 41-50 (Expert): the thinnest silhouettes ----
+    ('Snowflake', 'Nature'), // 41
+    ('Spider', 'Animal'), // 42
+    ('Palm Tree', 'Nature'), // 43
+    ('Bridge', 'Object'), // 44
+    ('Telescope', 'Object'), // 45
+    ('Bicycle', 'Object'), // 46
+    ('Windmill', 'Object'), // 47
+    ('Dragonfly', 'Animal'), // 48
+    ('Key', 'Object'), // 49
+    ('Eiffel Tower', 'Object'), // 50
+    // ---- Levels 51-60 (Expert): thin parts with more body ----
+    ('Compass', 'Object'), // 51
+    ('Crab', 'Animal'), // 52
+    ('Maze', 'Pattern'), // 53
+    ('Bolt', 'Shape'), // 54
+    ('Tulip', 'Nature'), // 55
+    ('Rose', 'Nature'), // 56
+    ('Eagle', 'Animal'), // 57
+    ('Satellite', 'Object'), // 58
+    ('Spiral', 'Pattern'), // 59
+    ('Galaxy', 'Nature'), // 60
+    // ---- Levels 61-70 (Expert): fuller silhouettes ----
+    ('Cactus', 'Nature'), // 61
+    ('Sun', 'Nature'), // 62
+    ('Planet', 'Nature'), // 63
+    ('Dinosaur', 'Animal'), // 64
+    ('Infinity', 'Pattern'), // 65
+    ('Chevron', 'Shape'), // 66
+    ('Crystal', 'Shape'), // 67
+    ('Balloon', 'Object'), // 68
+    ('Peacock', 'Animal'), // 69
+    ('Octopus', 'Animal'), // 70
+    // ---- Levels 71-80 (Expert): the fullest silhouettes, peak arrows ----
+    ('Mandala', 'Pattern'), // 71
+    ('Ring', 'Shape'), // 72
+    ('Paw Print', 'Animal'), // 73
+    ('Fox', 'Animal'), // 74
+    ('Starburst', 'Pattern'), // 75
+    ('Pagoda', 'Object'), // 76
+    ('Cog', 'Object'), // 77
+    ('Skull', 'Object'), // 78
+    ('Temple', 'Object'), // 79
+    ('Train', 'Object'), // 80
   ];
 
   static int _recipeIndex(int level) =>
@@ -878,11 +951,16 @@ class LevelDesigns {
     final name = recipe.$1;
     final category = recipe.$2;
 
+    // The board is sized from the real silhouette (holes included) so it
+    // holds the cells that this level's arrow count and arrow size need.
     return LevelDesign.shape(
       name,
       category,
       _hardened(name, l, _shapeFor(name, l)),
       preferredLongSide: longSideForLevel(l, name),
+      targetCells: targetCellsForLevel(l),
+      minSide: _minSide,
+      maxSide: _maxSide,
     );
   }
 

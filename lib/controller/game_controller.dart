@@ -93,21 +93,34 @@ class GameController extends GetxController {
   Timer? _hintTimer;
 
   // Coins
-  final earnedCoins = 0.obs;   // reward of the level just won (shown in dialog)
-  final coinBalance = 0.obs;   // total across all modes
-  final comboCoins = 0.obs;    // combo coins collected in the current attempt
-  bool _coinEligible = true;   // false when this level already paid in this mode
+  final earnedCoins = 0.obs; // reward of the level just won (shown in dialog)
+  final coinBalance = 0.obs; // total across all modes
+  final comboCoins = 0.obs; // combo coins collected in the current attempt
+  bool _coinEligible = true; // false when this level already paid in this mode
   bool _rewardPaid = false;
 
   static int comboCoinsFor(int streak) {
-    if (streak >= 10) return 6;
-    if (streak >= 7) return 5;
+    if (streak >= 10) return 5;
+    if (streak >= 7) return 4;
     if (streak >= 5) return 3;
     if (streak >= 4) return 2;
     return 0; // combo 2 and 3 give no coins
   }
 
-  int _baseReward(int lvl) => (10 + (lvl ~/ 5) * 2).clamp(10, 40).toInt();
+  /// Coins paid for clearing a level for the first time.
+  ///
+  /// Starts at 5 coins and goes up by 2 every 5 levels:
+  ///   levels 1-4   -> 5
+  ///   levels 5-9   -> 7
+  ///   levels 10-14 -> 9
+  ///   levels 20-24 -> 13
+  ///   levels 90+   -> 40 (cap)
+  ///
+  /// Combo coins are added on top of this (see comboCoinsFor).
+  int _baseReward(int lvl) =>
+      (5 + (lvl ~/ 5) * 2) // 5 base + 2 for every completed block of 5 levels
+          .clamp(5, 40) // never below 5, never above 40
+          .toInt(); // clamp returns num, so convert back to int
 
   /// Called by the screen when a combo streak finishes.
   /// Returns the coins granted (0 on a replayed level).
@@ -517,8 +530,10 @@ class GameController extends GetxController {
     earnedCoins.value = 0;
     comboCoins.value = 0;
     _rewardPaid = false;
-    _coinEligible =
-    !GameStorage.isCoinLevelClaimed(selectedMode.value.name, level.value);
+    _coinEligible = !GameStorage.isCoinLevelClaimed(
+      selectedMode.value.name,
+      level.value,
+    );
     coinBalance.value = GameStorage.totalCoins();
 
     message.value = 'Tap an arrow to clear its path';
@@ -627,85 +642,121 @@ class GameController extends GetxController {
   //    number of arrows that are OPEN at the start (free to tap) falls inside
   //    the target range for the level AND its design:
   //
-  //        open target = arrow count * open fraction(level)
+  //        open target = open count(level) * design factor
   //
-  //    The fraction falls smoothly as levels rise, so early levels start
-  //    with several open arrows and Expert levels with exactly one. Thin or
-  //    sparse designs get one extra open arrow, because their exit rays are
-  //    naturally less blocked.
+  //    The open count falls smoothly as levels rise (level 23 = about 5 to 6
+  //    open arrows). Thin or holey designs get more open arrows, because
+  //    their exit rays are naturally less blocked.
   //
   //  * Every tuning step is checked, so the level always stays solvable.
   // ===========================================================================
 
-  // Scales the open-at-start fraction. 0.6 combined with the 1.25x arrow
-  // boost leaves about 25% fewer open arrows than before.
-  static const double _openScale = 0.6;
+  // ---------------------------------------------------------------------------
+  // OPEN ARROWS AT THE START (level wise + design wise)
+  //
+  // The number of arrows that are free to tap when the level begins comes from
+  // two things:
+  //
+  //   1. A level table. It says how many open arrows a typical design gets on
+  //      that level. Early levels start with more, later levels with fewer.
+  //      Level 23 is 5.5, so a typical design opens 5 to 6 arrows there.
+  //
+  //   2. A design factor. Designs with a lot of exposed edge (thin parts,
+  //      holes, slits) have more arrows that are naturally free, so they get
+  //      more open arrows. Solid, compact designs get fewer.
+  //
+  //        open target = table(level) * design factor
+  //
+  // The range is floor(target)..ceil(target), so a target of 5.5 settles on
+  // 5 or 6 open arrows. Every tuning step keeps the level solvable.
+  // ---------------------------------------------------------------------------
 
-  // (level, fraction of arrows that are open at the start). Values between
-  // key points are interpolated, so the open count tapers with no jumps.
-  static const List<(int, double)> _openFractionKeys = [
-    (2, 0.40),
-    (6, 0.30),
-    (10, 0.20),
-    (15, 0.12),
-    (20, 0.07),
-    (25, 0.04),
-    (30, 0.03),
-    (35, 0.02),
-    (40, 0.012),
-    (50, 0.008),
-    (80, 0.005),
+  // (level, open arrows for a typical design). Values between key points are
+  // interpolated, so the open count tapers with no jumps.
+  static const List<(int, double)> _openCountKeys = [
+    (6, 8.0),
+    (10, 8.0),
+    (15, 7.0),
+    (20, 6.5),
+    (23, 5.5),
+    (30, 5.0),
+    (40, 4.5),
+    (50, 4.0),
+    (65, 3.5),
+    (80, 3.0),
   ];
 
-  double _openFractionForLevel(int lvl) {
-    final l = lvl.clamp(2, LevelDesigns.totalLevels).toInt();
+  double _openCountForLevel(int lvl) {
+    final l = lvl.clamp(6, LevelDesigns.totalLevels).toInt();
 
-    for (var i = 1; i < _openFractionKeys.length; i++) {
-      final b = _openFractionKeys[i];
+    for (var i = 1; i < _openCountKeys.length; i++) {
+      final b = _openCountKeys[i];
 
       if (l <= b.$1) {
-        final a = _openFractionKeys[i - 1];
+        final a = _openCountKeys[i - 1];
         final t = (l - a.$1) / (b.$1 - a.$1);
 
-        return (a.$2 + (b.$2 - a.$2) * t) * _openScale;
+        return a.$2 + (b.$2 - a.$2) * t;
       }
     }
 
-    return _openFractionKeys.last.$2 * _openScale;
+    return _openCountKeys.last.$2;
+  }
+
+  /// Share of playable cells that touch the outside of the design (the board
+  /// border, a hole, a slit or a thin part). Thin and detailed designs score
+  /// high, solid designs score low.
+  double _edgeRatio(LevelGrid grid) {
+    if (grid.cellCount == 0) return 0;
+
+    var edge = 0;
+
+    for (final id in grid.allowed) {
+      final x = id % grid.cols;
+      final y = id ~/ grid.cols;
+
+      if (!grid.contains(x - 1, y) ||
+          !grid.contains(x + 1, y) ||
+          !grid.contains(x, y - 1) ||
+          !grid.contains(x, y + 1)) {
+        edge++;
+      }
+    }
+
+    return edge / grid.cellCount;
+  }
+
+  /// Open-arrow multiplier for a design: 1.0 for an average silhouette,
+  /// up to 1.5 for thin / holey ones, down to 0.8 for solid blocks.
+  double _designOpenFactor(LevelGrid grid) {
+    return (1.0 + (_edgeRatio(grid) - 0.30)).clamp(0.8, 1.5).toDouble();
   }
 
   /// Target range of arrows that are open (tappable) at the start.
   ///
-  /// Based on the level (fraction curve), the arrow count of the level and
-  /// the design (thin / sparse silhouettes allow one more open arrow).
+  /// Based on the level (table), the arrow count of the level and the design
+  /// (edge exposure of the silhouette).
   (int, int) _openRange(int lvl, LevelGrid grid, int arrowCount) {
     if (LevelDesigns.isTutorial(lvl)) {
       return (arrowCount, arrowCount);
     }
 
-    final count = math.max(1, arrowCount);
-
-    // Level based center.
-    final center = math.max(1, (count * _openFractionForLevel(lvl)).round());
-
-    // Wider tolerance when the center is larger, so tuning can succeed.
-    final spread = center >= 6 ? 2 : (center >= 3 ? 1 : 0);
-
-    var lo = math.max(1, center - spread);
-    var hi = center + spread;
-
-    // Design based: thin / sparse silhouettes have more naturally free arrows.
-    final boardCells = math.max(1, grid.cols * grid.rows);
-    final fill = grid.cellCount / boardCells;
-
-    if (fill < 0.5 && lvl > 2) {
-      hi += 1;
+    // Levels 2-5: at most half the arrows are open at the start.
+    if (lvl <= 5) {
+      final c = math.max(1, arrowCount ~/ 2);
+      return (math.max(1, c - 1), c);
     }
 
-    // Expert tier always settles on exactly one open arrow.
-    if (LevelDesigns.difficultyForLevel(lvl) == 'Expert' && center <= 1) {
-      lo = 1;
-      hi = 1;
+    final count = math.max(1, arrowCount);
+
+    final target = _openCountForLevel(lvl) * _designOpenFactor(grid);
+
+    var lo = math.max(1, target.floor());
+    var hi = math.max(lo, target.ceil());
+
+    // A whole-number target still gets a small window, so tuning can succeed.
+    if (hi == lo && lo >= 4) {
+      hi = lo + 1;
     }
 
     hi = math.min(hi, count);
@@ -771,9 +822,13 @@ class GameController extends GetxController {
   /// The level is solvable if arrows can be removed one by one, each time
   /// taking an arrow whose blockers are already gone.
   ///
-  /// complexity = longest unlock chain * 100000 + total number of blockers.
+  /// complexity = longest unlock chain * 100000 + total blockers * 2
+  ///              - choices.
+  ///
   /// A long chain means the player has only one or two safe arrows at every
-  /// step, and many blockers means each safe arrow is hard to spot.
+  /// step. Many blockers means each safe arrow is hard to spot. "choices"
+  /// grows when layers of the unlock order are wide (many safe arrows to pick
+  /// from at once), so subtracting it favours narrow, sequential layouts.
   (int, bool, int) _evaluate(List<Set<int>> deps) {
     final n = deps.length;
 
@@ -814,7 +869,26 @@ class GameController extends GetxController {
       }
     }
 
-    return (free, queue.length == n, maxDepth * 100000 + totalDeps);
+    final solvable = queue.length == n;
+
+    // Width of each layer = how many safe arrows the player can pick from
+    // at that stage. Narrow layers = more sequential play.
+    var choices = 0;
+
+    if (solvable) {
+      final width = List<int>.filled(maxDepth + 1, 0);
+
+      for (final i in queue) {
+        width[depthOf[i]]++;
+      }
+
+      for (final w in width) {
+        choices += w * (w + 1) ~/ 2;
+      }
+    }
+
+    // Longest chain first, then more blockers, then fewer choices per step.
+    return (free, solvable, maxDepth * 100000 + totalDeps * 2 - choices);
   }
 
   (int, bool, int) _analyze(List<List<int>> paths, int cols, int rows) {
@@ -881,7 +955,7 @@ class GameController extends GetxController {
     var complexity = start.$3;
 
     // Phase 1: reach the open-arrow range.
-    var budget = 3000;
+    var budget = 6000;
     var improved = true;
 
     while (error > 0 && improved && budget > 0) {
@@ -907,10 +981,10 @@ class GameController extends GetxController {
     }
 
     // Phase 2: make the interior harder without opening more arrows.
-    var budget2 = 6000;
+    var budget2 = 15000;
     var stale = 0;
 
-    while (budget2 > 0 && stale < 3) {
+    while (budget2 > 0 && stale < 4) {
       var gained = false;
 
       final order = List<int>.generate(n, (i) => i)..shuffle(rng);
@@ -1086,13 +1160,13 @@ class GameController extends GetxController {
 
     candidates.sort((a, b) => a.$1.compareTo(b.$1));
 
-    // Tune the two best layouts and keep whichever is hardest.
+    // Tune the best layouts and keep whichever is hardest.
     var bestPaths = candidates.first.$2;
     var bestError = 1 << 30;
     var bestComplexity = -1;
 
-    for (final c in candidates.take(2)) {
-      if (c.$1 > candidates.first.$1 + 2) continue;
+    for (final c in candidates.take(4)) {
+      if (c.$1 > candidates.first.$1 + 4) continue;
 
       final r = _tuneOpenness(
         paths: c.$2,

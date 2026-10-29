@@ -51,7 +51,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       ? Colors.white.withValues(alpha: 0.10)
       : const Color(0xFF2F4A8A).withValues(alpha: 0.10);
 
-
   // ---------------------------------------------------------------------------
   // STATE
   // ---------------------------------------------------------------------------
@@ -65,11 +64,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late final AnimationController _shakeController;
   late final AnimationController _drawController;
   late final AnimationController _ambientController;
-  // late final RewardedAdService _rewardedAdService;
-  // late final InterstitialAdService _interstitialAdService;
+  late final RewardedAdService _rewardedAdService;
+  late final InterstitialAdService _interstitialAdService;
 
   // Show an interstitial after every 3rd level (3, 6, 9, ...).
-  static const int _adEveryLevels = 3;
+  static const int _adEveryLevels = 5;
 
   Worker? _livesWorker;
   int _prevLives = -1;
@@ -87,13 +86,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // Action pop + combo
   _ActionPop? _pop;
   int _popId = 0;
+
+  // New combo banner (top) + coin burst (center)
+  _ComboMsg? _comboMsg;
+  _CoinBurstData? _coinBurst;
+  int _fxId = 0;
+
   int _combo = 0;
   DateTime? _lastClear;
   DateTime? _pendingTapTime;
-  static const Duration _comboWindow = Duration(milliseconds: 1200);
+  static const Duration _comboWindow = Duration(milliseconds: 900);
   Timer? _comboTimer;
   DateTime? _milestoneUntil;
-  static const Duration _milestoneTime = Duration(milliseconds: 1150);
+  static const Duration _milestoneTime = Duration(milliseconds: 900);
 
   // Zoom
   static const double _minZoom = 1.0;
@@ -289,38 +294,31 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void _showComboPop(int streak) {
     if (!mounted || streak < 1) return;
 
-    final IconData icon;
     final String emoji;
     final Color color;
     final String title;
 
     if (streak >= 10) {
-      icon = Icons.emoji_events_rounded;
       emoji = '🏆';
       color = const Color(0xFFFFB300);
       title = 'INCREDIBLE!';
     } else if (streak >= 7) {
-      icon = Icons.auto_awesome_rounded;
       emoji = '🤩';
       color = const Color(0xFFFF4DA6);
       title = 'BRILLIANT!';
     } else if (streak >= 5) {
-      icon = Icons.local_fire_department_rounded;
       emoji = '🔥';
       color = const Color(0xFFFF7A1A);
       title = 'AWESOME!';
     } else if (streak >= 4) {
-      icon = Icons.bolt_rounded;
       emoji = '⚡';
       color = _violet;
       title = 'EXCELLENT!';
     } else if (streak >= 3) {
-      icon = Icons.thumb_up_rounded;
       emoji = '👍';
       color = const Color(0xFF1ED6C3);
       title = 'GREAT!';
     } else if (streak >= 2) {
-      icon = Icons.thumb_up_rounded;
       emoji = '👍';
       color = const Color(0xFF1ED6C3);
       title = 'COOL!';
@@ -331,15 +329,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     final c = Get.find<GameController>();
     final coins = c.addComboCoins(streak); // 0 when the level is a replay
 
-    _showPop(
-      icon: icon,
-      emoji: emoji,
-      color: color,
-      big: title,
-      label: streak > 1
-          ? (coins > 0 ? '$streak COMBO  +$coins 🪙' : '$streak COMBO')
-          : null,
-    );
+    setState(() {
+      _comboMsg = _ComboMsg(
+        id: ++_fxId,
+        emoji: emoji,
+        color: color,
+        title: title,
+        streak: streak,
+      );
+      _coinBurst = coins > 0 ? _CoinBurstData(id: ++_fxId, coins: coins) : null;
+    });
 
     // Streak finished, start fresh.
     _combo = 0;
@@ -370,14 +369,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       _resetZoom();
       _resetCombo();
       _prevArrows = -1; // level load is not a clear
-      setState(() => _pop = null);
+      setState(() {
+        _pop = null;
+        _comboMsg = null;
+        _coinBurst = null;
+      });
       c.nextLevel();
       _playEntrance();
     }
 
     // Ad after levels 3, 6, 9, 12, ... (never after level 1).
     if (finished % _adEveryLevels == 0) {
-      // _interstitialAdService.show(onDone: proceed);
+      _interstitialAdService.show(onDone: proceed);
     } else {
       proceed();
     }
@@ -387,18 +390,24 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     VibrationService.tap();
     _resetZoom();
     _resetCombo();
-    _prevArrows = -1;
-    if (mounted) setState(() => _pop = null);
+    _prevArrows = -1; // level reload is not a clear
+    if (mounted) {
+      setState(() {
+        _pop = null;
+        _comboMsg = null;
+        _coinBurst = null;
+      });
+    }
     c.restartLevel();
     _playEntrance();
   }
 
   void _handleBoardTap(
-      GameController c,
-      Offset position, {
-        required bool won,
-        required bool over,
-      }) {
+    GameController c,
+    Offset position, {
+    required bool won,
+    required bool over,
+  }) {
     if (won || over) return;
 
     final before = c.arrows.length;
@@ -513,28 +522,28 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     GameStorage.saveShowGrid(next);
   }
 
-  // void _watchRewardedAd(GameController c) {
-  //   if (!mounted || !c.isGameOver.value || c.isWon.value) return;
-  //
-  //   VibrationService.tap();
-  //
-  //   _rewardedAdService.showAd(
-  //     onRewardEarned: () {
-  //       if (!mounted) return;
-  //       c.continueAfterRewardedAd();
-  //     },
-  //     onUnavailable: () {
-  //       if (!mounted) return;
-  //       Get.snackbar(
-  //         'Ad not ready',
-  //         'Please try again in a moment.',
-  //         snackPosition: SnackPosition.TOP,
-  //         duration: const Duration(seconds: 3),
-  //       );
-  //     },
-  //     onClosedWithoutReward: () {},
-  //   );
-  // }
+  void _watchRewardedAd(GameController c) {
+    if (!mounted || !c.isGameOver.value || c.isWon.value) return;
+
+    VibrationService.tap();
+
+    _rewardedAdService.showAd(
+      onRewardEarned: () {
+        if (!mounted) return;
+        c.continueAfterRewardedAd();
+      },
+      onUnavailable: () {
+        if (!mounted) return;
+        Get.snackbar(
+          'Ad not ready',
+          'Please try again in a moment.',
+          snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 3),
+        );
+      },
+      onClosedWithoutReward: () {},
+    );
+  }
 
   void _watchAdForHint(GameController c) {
     if (!mounted) return;
@@ -549,33 +558,33 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
     VibrationService.tap();
 
-    // _rewardedAdService.showAd(
-    //   onRewardEarned: () {
-    //     if (!mounted) return;
-    //     c.grantHintFromAd(); // +1 hint only
-    //     resumeIfNeeded();
-    //   },
-    //   onUnavailable: () {
-    //     resumeIfNeeded();
-    //     if (!mounted) return;
-    //     Get.snackbar(
-    //       'Ad not ready',
-    //       'Please try again in a moment.',
-    //       snackPosition: SnackPosition.TOP,
-    //       duration: const Duration(seconds: 3),
-    //     );
-    //   },
-    //   onClosedWithoutReward: resumeIfNeeded,
-    // );
+    _rewardedAdService.showAd(
+      onRewardEarned: () {
+        if (!mounted) return;
+        c.grantHintFromAd(); // +1 hint only
+        resumeIfNeeded();
+      },
+      onUnavailable: () {
+        resumeIfNeeded();
+        if (!mounted) return;
+        Get.snackbar(
+          'Ad not ready',
+          'Please try again in a moment.',
+          snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 3),
+        );
+      },
+      onClosedWithoutReward: resumeIfNeeded,
+    );
   }
 
   @override
   void initState() {
     super.initState();
-    // _rewardedAdService = RewardedAdService();
-    // _rewardedAdService.loadAd();
-    // _interstitialAdService = InterstitialAdService();
-    // _interstitialAdService.loadAd();
+    _rewardedAdService = RewardedAdService();
+    _rewardedAdService.loadAd();
+    _interstitialAdService = InterstitialAdService();
+    _interstitialAdService.loadAd();
     _readArguments();
 
     _entranceController = AnimationController(
@@ -629,7 +638,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           if (mounted) {
             _shakeController.forward(from: 0);
             _showPop(
-              icon: Icons.heart_broken_rounded,emoji: '💔',
+              icon: Icons.heart_broken_rounded,
+              emoji: '💔',
               color: _red,
               big: 'OOPS!',
               label: 'Wrong move',
@@ -656,8 +666,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _zoomController.dispose();
     _tc.dispose();
     _entranceController.dispose();
-    // _rewardedAdService.dispose();
-    // _interstitialAdService.dispose();
+    _rewardedAdService.dispose();
+    _interstitialAdService.dispose();
 
     super.dispose();
   }
@@ -744,6 +754,51 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
           ),
 
+          // NEW: combo banner at the top, below the top bar
+          Positioned(
+            top: 132,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: IgnorePointer(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: _comboMsg == null
+                      ? const SizedBox.shrink()
+                      : _ComboBanner(
+                          key: ValueKey(_comboMsg!.id),
+                          msg: _comboMsg!,
+                          onDone: () {
+                            if (mounted && _comboMsg != null) {
+                              setState(() => _comboMsg = null);
+                            }
+                          },
+                        ),
+                ),
+              ),
+            ),
+          ),
+
+          // NEW: coin animation in the center
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Align(
+                alignment: const Alignment(0, 0.05),
+                child: _coinBurst == null
+                    ? const SizedBox.shrink()
+                    : _CoinBurst(
+                        key: ValueKey(_coinBurst!.id),
+                        data: _coinBurst!,
+                        onDone: () {
+                          if (mounted && _coinBurst != null) {
+                            setState(() => _coinBurst = null);
+                          }
+                        },
+                      ),
+              ),
+            ),
+          ),
+
           // Result dialog covers the whole screen.
           Obx(() {
             final won = c.isWon.value;
@@ -801,7 +856,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
                 // Show the rewarded-ad button only after all hearts are lost.
                 // Show the ad button on every loss.
-                // onWatchAd: !won ? () => _watchRewardedAd(c) : null,
+                onWatchAd: !won ? () => _watchRewardedAd(c) : null,
               ),
             );
           }),
@@ -846,10 +901,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
             // Level pill on the left
             Expanded(
-              child: Align(
-                alignment: Alignment.center,
-                child: _levelPill(c),
-              ),
+              child: Align(alignment: Alignment.center, child: _levelPill(c)),
             ),
 
             // Coin balance pill
@@ -858,7 +910,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
               return GestureDetector(
                 onTap: () {
-                   // Open your coin shop screen.
+                  // Open your coin shop screen.
                 },
                 child: Container(
                   height: 38,
@@ -866,9 +918,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   decoration: BoxDecoration(
                     color: _glass,
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: _glassBorder,
-                    ),
+                    border: Border.all(color: _glassBorder),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -887,23 +937,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           color: _textPrimary,
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
-                          fontFeatures: const [
-                            ui.FontFeature.tabularFigures(),
-                          ],
+                          fontFeatures: const [ui.FontFeature.tabularFigures()],
                         ),
                       ),
                       const SizedBox(width: 3),
-                      Icon(
-                        Icons.add_circle_rounded,
-                        color: _blue,
-                        size: 16,
-                      ),
+                      Icon(Icons.add_circle_rounded, color: _blue, size: 16),
                     ],
                   ),
                 ),
               );
             }),
-
           ],
         ),
       ),
@@ -1425,7 +1468,7 @@ class _ActionToastState extends State<_ActionToast>
       curve: const Interval(0.08, 0.55, curve: Curves.elasticOut),
     );
 
-// Emoji slides up from below into the centre of the badge.
+    // Emoji slides up from below into the centre of the badge.
     _emojiSlide = Tween<double>(begin: 18, end: 0).animate(
       CurvedAnimation(
         parent: _c,
@@ -1436,8 +1479,6 @@ class _ActionToastState extends State<_ActionToast>
 
   late final Animation<double> _emojiScale;
   late final Animation<double> _emojiSlide;
-
-
 
   @override
   void dispose() {
@@ -1488,31 +1529,31 @@ class _ActionToastState extends State<_ActionToast>
       child: Center(
         child: emoji != null
             ? AnimatedBuilder(
-          animation: _c,
-          builder: (_, child) {
-            return Transform.translate(
-              offset: Offset(0, _emojiSlide.value),
-              child: Transform.scale(
-                scale: _emojiScale.value,
-                child: child,
-              ),
-            );
-          },
-          child: Text(
-            emoji,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: size,
-              height: 1.0,
-              decoration: TextDecoration.none,
-            ),
-            textHeightBehavior: const TextHeightBehavior(
-              applyHeightToFirstAscent: false,
-              applyHeightToLastDescent: false,
-            ),
-          ),
-        )
-        // No emoji: use the pop's own colour, not the default white icon.
+                animation: _c,
+                builder: (_, child) {
+                  return Transform.translate(
+                    offset: Offset(0, _emojiSlide.value),
+                    child: Transform.scale(
+                      scale: _emojiScale.value,
+                      child: child,
+                    ),
+                  );
+                },
+                child: Text(
+                  emoji,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: size,
+                    height: 1.0,
+                    decoration: TextDecoration.none,
+                  ),
+                  textHeightBehavior: const TextHeightBehavior(
+                    applyHeightToFirstAscent: false,
+                    applyHeightToLastDescent: false,
+                  ),
+                ),
+              )
+            // No emoji: use the pop's own colour, not the default white icon.
             : Icon(p.icon, size: size, color: p.color),
       ),
     );
@@ -1525,7 +1566,6 @@ class _ActionToastState extends State<_ActionToast>
     color: color,
     height: 1.0,
     decoration: TextDecoration.none,
-
   );
 
   Widget _bigBody(_ActionPop p, double box, double iconSize, double bigSize) {
@@ -1542,7 +1582,6 @@ class _ActionToastState extends State<_ActionToast>
             decoration: BoxDecoration(
               color: p.color,
               borderRadius: BorderRadius.circular(14),
-
             ),
             child: Text(
               p.label!,
@@ -1571,7 +1610,6 @@ class _ActionToastState extends State<_ActionToast>
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(40),
-
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1597,6 +1635,339 @@ class _ActionToastState extends State<_ActionToast>
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// COMBO BANNER (top)
+// =============================================================================
+
+class _ComboMsg {
+  final int id;
+  final String emoji;
+  final Color color;
+  final String title;
+  final int streak;
+
+  const _ComboMsg({
+    required this.id,
+    required this.emoji,
+    required this.color,
+    required this.title,
+    required this.streak,
+  });
+}
+
+class _ComboBanner extends StatefulWidget {
+  final _ComboMsg msg;
+  final VoidCallback onDone;
+
+  const _ComboBanner({super.key, required this.msg, required this.onDone});
+
+  @override
+  State<_ComboBanner> createState() => _ComboBannerState();
+}
+
+class _ComboBannerState extends State<_ComboBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+  late final Animation<double> _slide;
+  late final Animation<double> _scale;
+  late final Animation<double> _opacity;
+  late final Animation<double> _emojiBounce;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..forward().whenComplete(widget.onDone);
+
+    // Drops down from above with a small overshoot.
+    _slide = Tween<double>(begin: -50, end: 0).animate(
+      CurvedAnimation(
+        parent: _c,
+        curve: const Interval(0.0, 0.25, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _scale = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _c,
+        curve: const Interval(0.0, 0.25, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _opacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 12),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 68),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 20),
+    ]).animate(_c);
+
+    _emojiBounce = CurvedAnimation(
+      parent: _c,
+      curve: const Interval(0.10, 0.50, curve: Curves.elasticOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final m = widget.msg;
+
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, _) {
+        return Opacity(
+          opacity: _opacity.value.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0, _slide.value),
+            child: Transform.scale(
+              scale: _scale.value,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  gradient: LinearGradient(
+                    colors: [m.color, m.color.withValues(alpha: 0.75)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: m.color.withValues(alpha: 0.45),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Transform.scale(
+                      scale: _emojiBounce.value.clamp(0.0, 1.4),
+                      child: Text(
+                        '${m.emoji.replaceAll('\uFE0F', '')}\uFE0F',
+                        style: const TextStyle(
+                          fontSize: 26,
+                          height: 1.0,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      m.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                    if (m.streak > 1) ...[
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.22),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Text(
+                          'x${m.streak} COMBO',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.0,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// =============================================================================
+// COIN BURST (center)
+// =============================================================================
+
+class _CoinBurstData {
+  final int id;
+  final int coins;
+
+  const _CoinBurstData({required this.id, required this.coins});
+}
+
+class _CoinBurst extends StatefulWidget {
+  final _CoinBurstData data;
+  final VoidCallback onDone;
+
+  const _CoinBurst({super.key, required this.data, required this.onDone});
+
+  @override
+  State<_CoinBurst> createState() => _CoinBurstState();
+}
+
+class _CoinBurstState extends State<_CoinBurst>
+    with SingleTickerProviderStateMixin {
+  static const _gold = Color(0xFFFFC857);
+  static const int _particles = 10;
+
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..forward().whenComplete(widget.onDone);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  double _seg(double a, double b, Curve curve) =>
+      curve.transform(((_c.value - a) / (b - a)).clamp(0.0, 1.0));
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 240,
+      height: 240,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (_, _) {
+          final t = _c.value;
+
+          // Whole effect fades out at the end.
+          final fade = t > 0.78 ? (1 - (t - 0.78) / 0.22) : 1.0;
+
+          final mainScale = _seg(0.0, 0.40, Curves.elasticOut);
+          final spin = _seg(0.0, 0.65, Curves.easeOutCubic) * math.pi * 4;
+          final lift = -_seg(0.0, 1.0, Curves.easeOutCubic) * 26;
+          final burst = _seg(0.12, 0.80, Curves.easeOutCubic);
+          final textIn = _seg(0.20, 0.50, Curves.easeOutBack);
+
+          return Opacity(
+            opacity: fade.clamp(0.0, 1.0),
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                // Soft golden glow
+                Container(
+                  width: 150 * mainScale,
+                  height: 150 * mainScale,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        _gold.withValues(alpha: 0.45),
+                        _gold.withValues(alpha: 0),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Small coins flying outward
+                for (var i = 0; i < _particles; i++)
+                  Builder(
+                    builder: (_) {
+                      final angle = (i / _particles) * 2 * math.pi;
+                      final dist = (70 + (i.isEven ? 30 : 0)) * burst;
+                      final size = i.isEven ? 22.0 : 16.0;
+
+                      return Transform.translate(
+                        offset: Offset(
+                          math.cos(angle) * dist,
+                          math.sin(angle) * dist + lift,
+                        ),
+                        child: Opacity(
+                          opacity: (1 - burst).clamp(0.0, 1.0),
+                          child: Transform.rotate(
+                            angle: angle + burst * math.pi,
+                            child: Icon(
+                              Icons.monetization_on_rounded,
+                              color: _gold,
+                              size: size,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                // Main spinning coin
+                Transform.translate(
+                  offset: Offset(0, lift),
+                  child: Transform.scale(
+                    scale: mainScale,
+                    child: Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.002)
+                        ..rotateY(spin),
+                      child: const Icon(
+                        Icons.monetization_on_rounded,
+                        color: _gold,
+                        size: 88,
+                        shadows: [
+                          Shadow(color: Color(0x66FF9A00), blurRadius: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // +N text
+                Transform.translate(
+                  offset: Offset(0, 66 + lift),
+                  child: Transform.scale(
+                    scale: textIn,
+                    child: Text(
+                      '+${widget.data.coins}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        decoration: TextDecoration.none,
+                        shadows: [
+                          Shadow(color: Color(0xFFFF9A00), blurRadius: 12),
+                          Shadow(color: Colors.black38, blurRadius: 4),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -1750,10 +2121,7 @@ class _AnimatedCount extends StatelessWidget {
   }
 }
 
-// =============================================================================
 // GLASS ICON BUTTON (top bar)
-// =============================================================================
-
 class _GlassIconButton extends StatefulWidget {
   final IconData icon;
   final double iconSize;
@@ -1822,10 +2190,7 @@ class _GlassIconButtonState extends State<_GlassIconButton> {
   }
 }
 
-// =============================================================================
 // DOCK BUTTON (hint / grid / zoom)
-// =============================================================================
-
 class _DockButton extends StatefulWidget {
   final IconData icon;
   final Color color;
