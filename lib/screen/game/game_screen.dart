@@ -64,8 +64,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late final AnimationController _shakeController;
   late final AnimationController _drawController;
   late final AnimationController _ambientController;
-  late final RewardedAdService _rewardedAdService;
-  late final InterstitialAdService _interstitialAdService;
+  // late final RewardedAdService _rewardedAdService;
+  // late final InterstitialAdService _interstitialAdService;
 
   // Show an interstitial after every 3rd level (3, 6, 9, ...).
   static const int _adEveryLevels = 5;
@@ -377,13 +377,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       c.nextLevel();
       _playEntrance();
     }
-
+    proceed();
     // Ad after levels 3, 6, 9, 12, ... (never after level 1).
-    if (finished % _adEveryLevels == 0) {
-      _interstitialAdService.show(onDone: proceed);
-    } else {
-      proceed();
-    }
+    // if (finished % _adEveryLevels == 0) {
+    //   _interstitialAdService.show(onDone: proceed);
+    // } else {
+    //   proceed();
+    // }
   }
 
   void _restartLevel(GameController c) {
@@ -435,7 +435,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         compact: true,
       );
     } else {
-      _watchAdForHint(c);
+      // _watchAdForHint(c);
     }
   }
 
@@ -522,69 +522,69 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     GameStorage.saveShowGrid(next);
   }
 
-  void _watchRewardedAd(GameController c) {
-    if (!mounted || !c.isGameOver.value || c.isWon.value) return;
-
-    VibrationService.tap();
-
-    _rewardedAdService.showAd(
-      onRewardEarned: () {
-        if (!mounted) return;
-        c.continueAfterRewardedAd();
-      },
-      onUnavailable: () {
-        if (!mounted) return;
-        Get.snackbar(
-          'Ad not ready',
-          'Please try again in a moment.',
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 3),
-        );
-      },
-      onClosedWithoutReward: () {},
-    );
-  }
-
-  void _watchAdForHint(GameController c) {
-    if (!mounted) return;
-
-    // Pause the countdown during the ad, but only if the player hadn't paused it.
-    final pausedByAd = c.timedMode && !c.isPaused.value;
-    if (pausedByAd) c.pauseGame();
-
-    void resumeIfNeeded() {
-      if (pausedByAd && mounted) c.resumeGame();
-    }
-
-    VibrationService.tap();
-
-    _rewardedAdService.showAd(
-      onRewardEarned: () {
-        if (!mounted) return;
-        c.grantHintFromAd(); // +1 hint only
-        resumeIfNeeded();
-      },
-      onUnavailable: () {
-        resumeIfNeeded();
-        if (!mounted) return;
-        Get.snackbar(
-          'Ad not ready',
-          'Please try again in a moment.',
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 3),
-        );
-      },
-      onClosedWithoutReward: resumeIfNeeded,
-    );
-  }
+  // void _watchRewardedAd(GameController c) {
+  //   if (!mounted || !c.isGameOver.value || c.isWon.value) return;
+  //
+  //   VibrationService.tap();
+  //
+  //   _rewardedAdService.showAd(
+  //     onRewardEarned: () {
+  //       if (!mounted) return;
+  //       c.continueAfterRewardedAd();
+  //     },
+  //     onUnavailable: () {
+  //       if (!mounted) return;
+  //       Get.snackbar(
+  //         'Ad not ready',
+  //         'Please try again in a moment.',
+  //         snackPosition: SnackPosition.TOP,
+  //         duration: const Duration(seconds: 3),
+  //       );
+  //     },
+  //     onClosedWithoutReward: () {},
+  //   );
+  // }
+  //
+  // void _watchAdForHint(GameController c) {
+  //   if (!mounted) return;
+  //
+  //   // Pause the countdown during the ad, but only if the player hadn't paused it.
+  //   final pausedByAd = c.timedMode && !c.isPaused.value;
+  //   if (pausedByAd) c.pauseGame();
+  //
+  //   void resumeIfNeeded() {
+  //     if (pausedByAd && mounted) c.resumeGame();
+  //   }
+  //
+  //   VibrationService.tap();
+  //
+  //   _rewardedAdService.showAd(
+  //     onRewardEarned: () {
+  //       if (!mounted) return;
+  //       c.grantHintFromAd(); // +1 hint only
+  //       resumeIfNeeded();
+  //     },
+  //     onUnavailable: () {
+  //       resumeIfNeeded();
+  //       if (!mounted) return;
+  //       Get.snackbar(
+  //         'Ad not ready',
+  //         'Please try again in a moment.',
+  //         snackPosition: SnackPosition.TOP,
+  //         duration: const Duration(seconds: 3),
+  //       );
+  //     },
+  //     onClosedWithoutReward: resumeIfNeeded,
+  //   );
+  // }
 
   @override
   void initState() {
     super.initState();
-    _rewardedAdService = RewardedAdService();
-    _rewardedAdService.loadAd();
-    _interstitialAdService = InterstitialAdService();
-    _interstitialAdService.loadAd();
+    // _rewardedAdService = RewardedAdService();
+    // _rewardedAdService.loadAd();
+    // _interstitialAdService = InterstitialAdService();
+    // _interstitialAdService.loadAd();
     _readArguments();
 
     _entranceController = AnimationController(
@@ -666,8 +666,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _zoomController.dispose();
     _tc.dispose();
     _entranceController.dispose();
-    _rewardedAdService.dispose();
-    _interstitialAdService.dispose();
+    // _rewardedAdService.dispose();
+    // _interstitialAdService.dispose();
 
     super.dispose();
   }
@@ -856,7 +856,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
                 // Show the rewarded-ad button only after all hearts are lost.
                 // Show the ad button on every loss.
-                onWatchAd: !won ? () => _watchRewardedAd(c) : null,
+                // onWatchAd: !won ? () => _watchRewardedAd(c) : null,
               ),
             );
           }),

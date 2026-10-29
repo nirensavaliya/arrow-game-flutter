@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:arrow/screen/game/store/game_store_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -53,6 +54,8 @@ class _GameIntroScreenState extends State<GameIntroScreen>
   late final AnimationController _intro;
   late final AnimationController _ambient;
   late final PageController _pageController;
+
+
 
   final List<_GameMode> _modes = [
     _GameMode(
@@ -166,7 +169,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     controller.startMode(mode);
 
     await Get.to(
-          () => const LevelScreen(),
+      () => const LevelScreen(),
       arguments: {'mode': mode.name},
       transition: Transition.rightToLeft,
       duration: const Duration(milliseconds: 350),
@@ -385,64 +388,81 @@ class _GameIntroScreenState extends State<GameIntroScreen>
             ],
           ),
         ),
-
-        // Coin pill
-        _buildCoinPill(),
+        // Settings button
+        _glassIconButton(icon: Icons.settings_rounded, onTap: _openSettings),
 
         const SizedBox(width: 9),
 
-        // Settings button
-        _glassIconButton(icon: Icons.settings_rounded, onTap: _openSettings),
+        // Coin pill
+        _buildCoinPill(),
       ],
     );
   }
 
   // Premium coin balance pill
   Widget _buildCoinPill() {
-    return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 9),
-      decoration: BoxDecoration(
-        color: _isDark
-            ? Colors.white.withValues(alpha: 0.07)
-            : Colors.white.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 25,
-            height: 25,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFFFE58A),
-                  Color(0xFFFFB52E),
-                  Color(0xFFE88B16),
-                ],
+    return GestureDetector(
+      onTap: () {
+        Get.to(() => const GameStoreScreen());
+      },
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.only(left: 7, right: 5),
+        decoration: BoxDecoration(
+          color: _isDark
+              ? Colors.white.withValues(alpha: 0.07)
+              : Colors.white.withValues(alpha: 0.88),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: _isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.04),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Gold coin icon
+            Container(
+              width: 25,
+              height: 25,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFFFE58A),
+                    Color(0xFFFFB52E),
+                    Color(0xFFE88B16),
+                  ],
+                ),
+              ),
+              child: const Icon(
+                Icons.monetization_on_rounded,
+                color: Color(0xFF8B4B00),
+                size: 19,
               ),
             ),
-            child: const Icon(
-              Icons.monetization_on_rounded,
-              color: Color(0xFF8B4B00),
-              size: 19,
+
+            const SizedBox(width: 6),
+
+            // Coin count
+            Text(
+              '$_coinCount',
+              style: TextStyle(
+                color: _textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.2,
+              ),
             ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '$_coinCount',
-            style: TextStyle(
-              color: _textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ],
+
+            // Add coins button
+            const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+          ],
+        ),
       ),
     );
   }

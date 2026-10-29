@@ -110,12 +110,6 @@
       "languageVersion": "2.16"
     },
     {
-      "name": "google_mobile_ads",
-      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/google_mobile_ads-9.2.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.10"
-    },
-    {
       "name": "hooks",
       "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/hooks-2.0.2",
       "packageUri": "lib/",
@@ -354,30 +348,6 @@
       "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/web-1.1.1",
       "packageUri": "lib/",
       "languageVersion": "3.4"
-    },
-    {
-      "name": "webview_flutter",
-      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/webview_flutter-4.14.1",
-      "packageUri": "lib/",
-      "languageVersion": "3.10"
-    },
-    {
-      "name": "webview_flutter_android",
-      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/webview_flutter_android-4.14.1",
-      "packageUri": "lib/",
-      "languageVersion": "3.12"
-    },
-    {
-      "name": "webview_flutter_platform_interface",
-      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/webview_flutter_platform_interface-2.15.1",
-      "packageUri": "lib/",
-      "languageVersion": "3.9"
-    },
-    {
-      "name": "webview_flutter_wkwebview",
-      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/webview_flutter_wkwebview-3.26.2",
-      "packageUri": "lib/",
-      "languageVersion": "3.12"
     },
     {
       "name": "xdg_directories",
