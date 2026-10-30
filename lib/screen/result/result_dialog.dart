@@ -29,6 +29,9 @@ class ResultDialog extends StatefulWidget {
   final VoidCallback onSecondary;
   final VoidCallback onHome;
   final VoidCallback? onWatchAd;
+  /// Called with 1.5 or 1.7 after the player taps a bonus button.
+  final void Function(double multiplier)? onWatchAdBonus;
+  final bool bonusClaimed;
   final String primaryLabel;
   final String secondaryLabel;
 
@@ -48,6 +51,8 @@ class ResultDialog extends StatefulWidget {
     this.primaryLabel = '',
     this.secondaryLabel = '',
     this.onWatchAd,
+    this.onWatchAdBonus,
+    this.bonusClaimed = false,
     this.earnedCoins = 0,
     this.coinBalance = 0,
   });
@@ -375,6 +380,10 @@ class _ResultDialogState extends State<ResultDialog>
                 if (won && widget.earnedCoins > 0) ...[
                   const SizedBox(height: 14),
                   _coinReward(),
+                  if (widget.onWatchAdBonus != null) ...[
+                    const SizedBox(height: 10),
+                    _bonusRow(),
+                  ],
                 ],
 
                 const SizedBox(height: 20),
@@ -423,6 +432,32 @@ class _ResultDialogState extends State<ResultDialog>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _bonusRow() {
+    if (widget.bonusClaimed) {
+      return _chip('Bonus claimed!', Icons.check_circle_rounded, _mint);
+    }
+
+    return Row(
+      spacing: 10,
+      children: [
+        Expanded(child: _bonusButton(1.2, const [_mint, _blue])),
+        Expanded(child: _bonusButton(1.5, const [_violet, _blue])),
+      ],
+    );
+  }
+
+  Widget _bonusButton(double m, List<Color> colors) {
+    // Preview of the extra coins this option gives.
+    final extra = (widget.earnedCoins * m).round() - widget.earnedCoins;
+
+    return _GradientButton(
+      label: 'x$m  +$extra',
+      icon: Icons.play_circle_rounded,
+      colors: colors,
+      onTap: () => widget.onWatchAdBonus!(m),
     );
   }
 

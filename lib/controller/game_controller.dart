@@ -86,6 +86,7 @@ class GameController extends GetxController {
 
   // Seconds given by the "Watch Ad & Continue" button after time is up.
   static const double adBonusSec = 0.5;
+  final bonusClaimed = false.obs; // x1.5 / x1.7 ad bonus already taken
 
   final hintsRemaining = initialHints.obs;
   final Rxn<ArrowModel> hintArrow = Rxn<ArrowModel>();
@@ -529,6 +530,7 @@ class GameController extends GetxController {
     // Coins: only the first clear of this level in THIS mode pays.
     earnedCoins.value = 0;
     comboCoins.value = 0;
+    bonusClaimed.value = false; // <-- add
     _rewardPaid = false;
     _coinEligible = !GameStorage.isCoinLevelClaimed(
       selectedMode.value.name,
@@ -644,9 +646,13 @@ class GameController extends GetxController {
   //
   //        open target = open count(level) * design factor
   //
-  //    The open count falls smoothly as levels rise (level 23 = about 5 to 6
-  //    open arrows). Thin or holey designs get more open arrows, because
-  //    their exit rays are naturally less blocked.
+  //  * Levels 1-20: the open count falls smoothly as levels rise.
+  //  * Levels 21+ (DECOY MODE): the open count RISES again, so many arrows
+  //    are open at the start. But most of those open arrows are decoys:
+  //    clearing them does not unlock anything. Only a few "key" open arrows
+  //    free the next arrows of the chain. The player must think and search
+  //    for the arrow that really opens the next step, instead of tapping
+  //    any open arrow.
   //
   //  * Every tuning step is checked, so the level always stays solvable.
   // ===========================================================================
@@ -654,37 +660,38 @@ class GameController extends GetxController {
   // ---------------------------------------------------------------------------
   // OPEN ARROWS AT THE START (level wise + design wise)
   //
-  // The number of arrows that are free to tap when the level begins comes from
-  // two things:
+  //   open target = table(level) * design factor
   //
-  //   1. A level table. It says how many open arrows a typical design gets on
-  //      that level. Early levels start with more, later levels with fewer.
-  //      Level 23 is 5.5, so a typical design opens 5 to 6 arrows there.
-  //
-  //   2. A design factor. Designs with a lot of exposed edge (thin parts,
-  //      holes, slits) have more arrows that are naturally free, so they get
-  //      more open arrows. Solid, compact designs get fewer.
-  //
-  //        open target = table(level) * design factor
-  //
-  // The range is floor(target)..ceil(target), so a target of 5.5 settles on
-  // 5 or 6 open arrows. Every tuning step keeps the level solvable.
+  // The range is floor(target)..ceil(target) (always at least a 2-wide
+  // window). Every tuning step keeps the level solvable.
   // ---------------------------------------------------------------------------
 
   // (level, open arrows for a typical design). Values between key points are
-  // interpolated, so the open count tapers with no jumps.
+  // interpolated, so the open count changes with no jumps.
+  //
+  // Up to level 20 the open count goes down (easy -> harder).
+  // After level 20 it goes UP: many open arrows, but most are decoys
+  // (see _decoyMode), so the level gets harder, not easier.
   static const List<(int, double)> _openCountKeys = [
-    (6, 8.0),
-    (10, 8.0),
-    (15, 7.0),
-    (20, 6.5),
-    (23, 5.5),
-    (30, 5.0),
-    (40, 4.5),
-    (50, 4.0),
-    (65, 3.5),
-    (80, 3.0),
+    (6, 3.0),
+    (10, 4.0),
+    (15, 5.0),
+    (20, 6.0),
+    (30, 8.0),
+    (40, 10.0),
+    (50, 12.0),
+    (65, 14.0),
+    (80, 16.0),
   ];
+
+  // First level where the "many open arrows, but few of them useful" rule
+  // and the "gets harder while you clear" rule are used.
+  static const int _decoyFromLevel = 11;
+
+  // True while a level above 20 is being generated. In this mode the
+  // complexity score punishes open arrows that unlock other arrows, so the
+  // open arrows are mostly decoys and only a few are the real next step.
+  bool _decoyMode = false;
 
   double _openCountForLevel(int lvl) {
     final l = lvl.clamp(6, LevelDesigns.totalLevels).toInt();
@@ -726,10 +733,10 @@ class GameController extends GetxController {
     return edge / grid.cellCount;
   }
 
-  /// Open-arrow multiplier for a design: 1.0 for an average silhouette,
-  /// up to 1.5 for thin / holey ones, down to 0.8 for solid blocks.
+  /// Open-arrow multiplier for a design: about 0.9 for an average silhouette,
+  /// up to 1.1 for thin / holey ones, down to 0.7 for solid blocks.
   double _designOpenFactor(LevelGrid grid) {
-    return (1.0 + (_edgeRatio(grid) - 0.30)).clamp(0.8, 1.5).toDouble();
+    return (0.9 + (_edgeRatio(grid) - 0.30) * 0.5).clamp(0.7, 1.1).toDouble();
   }
 
   /// Target range of arrows that are open (tappable) at the start.
@@ -741,9 +748,9 @@ class GameController extends GetxController {
       return (arrowCount, arrowCount);
     }
 
-    // Levels 2-5: at most half the arrows are open at the start.
+    // Levels 2-5: at most one third of the arrows are open at the start.
     if (lvl <= 5) {
-      final c = math.max(1, arrowCount ~/ 2);
+      final c = math.max(1, arrowCount ~/ 3);
       return (math.max(1, c - 1), c);
     }
 
@@ -754,10 +761,11 @@ class GameController extends GetxController {
     var lo = math.max(1, target.floor());
     var hi = math.max(lo, target.ceil());
 
-    // A whole-number target still gets a small window, so tuning can succeed.
-    if (hi == lo && lo >= 4) {
-      hi = lo + 1;
-    }
+    // Always keep a small window, so tuning can succeed.
+    if (hi == lo) hi = lo + 1;
+
+    // Many open arrows (decoy levels) get a wider window so tuning succeeds.
+    if (lvl >= _decoyFromLevel) hi = hi + 1;
 
     hi = math.min(hi, count);
     lo = math.min(lo, hi);
@@ -822,13 +830,21 @@ class GameController extends GetxController {
   /// The level is solvable if arrows can be removed one by one, each time
   /// taking an arrow whose blockers are already gone.
   ///
-  /// complexity = longest unlock chain * 100000 + total blockers * 2
-  ///              - choices.
+  /// complexity = longest unlock chain * 100000 + total blockers * 4
+  ///              + multi-blocked arrows * 40 - single-blocked arrows * 80
+  ///              - choices * 30.
   ///
-  /// A long chain means the player has only one or two safe arrows at every
-  /// step. Many blockers means each safe arrow is hard to spot. "choices"
-  /// grows when layers of the unlock order are wide (many safe arrows to pick
-  /// from at once), so subtracting it favours narrow, sequential layouts.
+  /// Arrows with exactly ONE blocker are easy ("clear one, the next opens"),
+  /// so they are penalised. Arrows with 2+ blockers need several clears first,
+  /// so they are rewarded. "choices" grows when layers of the unlock order are
+  /// wide (many safe arrows to pick from at once), so subtracting it favours
+  /// narrow, sequential layouts.
+  ///
+  /// In decoy mode (levels above 20) there is one more term:
+  ///   - keyOpen * 500
+  /// keyOpen = open arrows that block at least one other arrow (clearing them
+  /// unlocks something). Fewer of them means most open arrows are decoys, and
+  /// the player has to find the few arrows that really lead to the next step.
   (int, bool, int) _evaluate(List<Set<int>> deps) {
     final n = deps.length;
 
@@ -854,6 +870,13 @@ class GameController extends GetxController {
       }
     }
 
+    // Open arrows that unlock at least one other arrow ("key" arrows).
+    var keyOpen = 0;
+
+    for (var i = 0; i < n; i++) {
+      if (deps[i].isEmpty && dependents[i].isNotEmpty) keyOpen++;
+    }
+
     var cursor = 0;
     var maxDepth = 0;
 
@@ -875,6 +898,12 @@ class GameController extends GetxController {
     // at that stage. Narrow layers = more sequential play.
     var choices = 0;
 
+    // Taper penalty (hard mode only): the later a layer is in the unlock
+    // order, the more a wide layer is punished. Early layers may be wide
+    // (many open arrows, mostly decoys), late layers must be narrow, so the
+    // player has fewer and fewer free choices as the board empties.
+    var taperPenalty = 0;
+
     if (solvable) {
       final width = List<int>.filled(maxDepth + 1, 0);
 
@@ -882,13 +911,47 @@ class GameController extends GetxController {
         width[depthOf[i]]++;
       }
 
-      for (final w in width) {
+      for (var d = 0; d < width.length; d++) {
+        final w = width[d];
         choices += w * (w + 1) ~/ 2;
+
+        if (_decoyMode && maxDepth > 0 && w > 1) {
+          // d / maxDepth goes from 0 (start) to 1 (end of the level).
+          taperPenalty += ((w - 1) * 600 * d) ~/ maxDepth;
+        }
       }
     }
 
-    // Longest chain first, then more blockers, then fewer choices per step.
-    return (free, solvable, maxDepth * 100000 + totalDeps * 2 - choices);
+    var singles = 0; // arrows with ONE blocker (easy: clear one, next opens)
+    var multi = 0; // arrows with 2+ blockers (hard: needs several clears)
+
+    for (final d in deps) {
+      if (d.length == 1) {
+        singles++;
+      } else if (d.length >= 2) {
+        multi++;
+      }
+    }
+
+    // Decoy mode: many open arrows, but only a few of them unlock anything.
+    // The unlock-chain depth term (100000 per step) still dominates.
+    final decoyPenalty = _decoyMode ? keyOpen * 500 : 0;
+
+    // Hard mode rewards arrows that need several clears first much more.
+    final multiWeight = _decoyMode ? 120 : 40;
+
+    // Fewer singles, more multi-blocked arrows, narrow frontier.
+    return (
+      free,
+      solvable,
+      maxDepth * 100000 +
+          totalDeps * 4 +
+          multi * multiWeight -
+          singles * 80 -
+          choices * 30 -
+          decoyPenalty -
+          taperPenalty,
+    );
   }
 
   (int, bool, int) _analyze(List<List<int>> paths, int cols, int rows) {
@@ -981,7 +1044,8 @@ class GameController extends GetxController {
     }
 
     // Phase 2: make the interior harder without opening more arrows.
-    var budget2 = 15000;
+    // In decoy mode this also pushes the open arrows to be decoys.
+    var budget2 = _decoyMode ? 30000 : 15000;
     var stale = 0;
 
     while (budget2 > 0 && stale < 4) {
@@ -1092,6 +1156,9 @@ class GameController extends GetxController {
     final cells = allowed.length;
     final maxLen = _maxPathLength(lvl);
 
+    // Levels above 20: many open arrows, most of them decoys.
+    _decoyMode = lvl >= _decoyFromLevel;
+
     var target = LevelDesigns.safeArrowCount(lvl, grid, cellsPerArrow: 2);
 
     // Keep arrows short enough that the board stays busy.
@@ -1163,7 +1230,7 @@ class GameController extends GetxController {
     // Tune the best layouts and keep whichever is hardest.
     var bestPaths = candidates.first.$2;
     var bestError = 1 << 30;
-    var bestComplexity = -1;
+    var bestComplexity = -(1 << 30);
 
     for (final c in candidates.take(4)) {
       if (c.$1 > candidates.first.$1 + 4) continue;
@@ -2075,6 +2142,25 @@ class GameController extends GetxController {
     }
 
     // Keep the current board; do not call loadLevel().
+    VibrationService.success();
+  }
+
+  /// Extra coins a multiplier would add on top of the current reward.
+  int bonusExtraFor(double multiplier) =>
+      (earnedCoins.value * multiplier).round() - earnedCoins.value;
+
+  /// Called after the rewarded ad finishes. One claim per win.
+  void claimBonusCoins(double multiplier) {
+    if (!isWon.value || !_rewardPaid || bonusClaimed.value) return;
+    if (earnedCoins.value <= 0) return;
+
+    final extra = bonusExtraFor(multiplier);
+    if (extra <= 0) return;
+
+    bonusClaimed.value = true;
+    earnedCoins.value += extra;
+    unawaited(GameStorage.addCoins(extra));
+    coinBalance.value = GameStorage.totalCoins();
     VibrationService.success();
   }
 }

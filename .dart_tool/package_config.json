@@ -20,6 +20,48 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "audioplayers",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/audioplayers-6.8.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "audioplayers_android",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/audioplayers_android-5.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "audioplayers_darwin",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/audioplayers_darwin-6.5.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "audioplayers_linux",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/audioplayers_linux-4.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "audioplayers_platform_interface",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/audioplayers_platform_interface-7.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "audioplayers_web",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/audioplayers_web-5.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "audioplayers_windows",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/audioplayers_windows-4.4.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
       "name": "boolean_selector",
       "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/boolean_selector-2.1.2",
       "packageUri": "lib/",
@@ -80,6 +122,18 @@
       "languageVersion": "3.7"
     },
     {
+      "name": "file",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/file-7.0.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "fixnum",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/fixnum-1.1.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
       "name": "flutter",
       "rootUri": "file:///Users/imac/StudioProjects/flutter/packages/flutter",
       "packageUri": "lib/",
@@ -98,6 +152,12 @@
       "languageVersion": "3.10"
     },
     {
+      "name": "flutter_web_plugins",
+      "rootUri": "file:///Users/imac/StudioProjects/flutter/packages/flutter_web_plugins",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
       "name": "get",
       "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/get-4.7.3",
       "packageUri": "lib/",
@@ -108,6 +168,12 @@
       "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/get_storage-2.1.1",
       "packageUri": "lib/",
       "languageVersion": "2.16"
+    },
+    {
+      "name": "google_mobile_ads",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/google_mobile_ads-9.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
     },
     {
       "name": "hooks",
@@ -314,6 +380,12 @@
       "languageVersion": "3.1"
     },
     {
+      "name": "synchronized",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/synchronized-3.5.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.12"
+    },
+    {
       "name": "term_glyph",
       "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/term_glyph-1.2.2",
       "packageUri": "lib/",
@@ -332,6 +404,12 @@
       "languageVersion": "3.5"
     },
     {
+      "name": "uuid",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/uuid-4.6.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "vector_math",
       "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/vector_math-2.2.0",
       "packageUri": "lib/",
@@ -348,6 +426,30 @@
       "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/web-1.1.1",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "webview_flutter",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/webview_flutter-4.14.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.10"
+    },
+    {
+      "name": "webview_flutter_android",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/webview_flutter_android-4.14.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.12"
+    },
+    {
+      "name": "webview_flutter_platform_interface",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/webview_flutter_platform_interface-2.15.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.9"
+    },
+    {
+      "name": "webview_flutter_wkwebview",
+      "rootUri": "file:///Users/imac/.pub-cache/hosted/pub.dev/webview_flutter_wkwebview-3.26.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.12"
     },
     {
       "name": "xdg_directories",

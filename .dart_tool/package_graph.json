@@ -7,10 +7,12 @@
       "name": "arrow",
       "version": "1.0.0+1",
       "dependencies": [
+        "audioplayers",
         "cupertino_icons",
         "flutter",
         "get",
         "get_storage",
+        "google_mobile_ads",
         "lottie"
       ],
       "devDependencies": [
@@ -50,6 +52,25 @@
       ]
     },
     {
+      "name": "audioplayers",
+      "version": "6.8.1",
+      "dependencies": [
+        "audioplayers_android",
+        "audioplayers_darwin",
+        "audioplayers_linux",
+        "audioplayers_platform_interface",
+        "audioplayers_web",
+        "audioplayers_windows",
+        "file",
+        "flutter",
+        "http",
+        "meta",
+        "path_provider",
+        "synchronized",
+        "uuid"
+      ]
+    },
+    {
       "name": "lottie",
       "version": "3.7.0",
       "dependencies": [
@@ -58,6 +79,17 @@
         "http",
         "path",
         "vector_math"
+      ]
+    },
+    {
+      "name": "google_mobile_ads",
+      "version": "9.2.0",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "webview_flutter",
+        "webview_flutter_android",
+        "webview_flutter_wkwebview"
       ]
     },
     {
@@ -184,22 +216,17 @@
       ]
     },
     {
-      "name": "http",
-      "version": "1.6.0",
+      "name": "uuid",
+      "version": "4.6.0",
       "dependencies": [
-        "async",
-        "http_parser",
-        "meta",
-        "web"
+        "crypto",
+        "fixnum"
       ]
     },
     {
-      "name": "archive",
-      "version": "4.5.2",
-      "dependencies": [
-        "path",
-        "posix"
-      ]
+      "name": "synchronized",
+      "version": "3.5.0",
+      "dependencies": []
     },
     {
       "name": "path_provider",
@@ -211,6 +238,113 @@
         "path_provider_linux",
         "path_provider_platform_interface",
         "path_provider_windows"
+      ]
+    },
+    {
+      "name": "http",
+      "version": "1.6.0",
+      "dependencies": [
+        "async",
+        "http_parser",
+        "meta",
+        "web"
+      ]
+    },
+    {
+      "name": "file",
+      "version": "7.0.1",
+      "dependencies": [
+        "meta",
+        "path"
+      ]
+    },
+    {
+      "name": "audioplayers_windows",
+      "version": "4.4.1",
+      "dependencies": [
+        "audioplayers_platform_interface",
+        "flutter"
+      ]
+    },
+    {
+      "name": "audioplayers_web",
+      "version": "5.3.0",
+      "dependencies": [
+        "audioplayers_platform_interface",
+        "flutter",
+        "flutter_web_plugins",
+        "web"
+      ]
+    },
+    {
+      "name": "audioplayers_platform_interface",
+      "version": "7.2.0",
+      "dependencies": [
+        "collection",
+        "flutter",
+        "meta",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "audioplayers_linux",
+      "version": "4.3.0",
+      "dependencies": [
+        "audioplayers_platform_interface",
+        "flutter"
+      ]
+    },
+    {
+      "name": "audioplayers_darwin",
+      "version": "6.5.0",
+      "dependencies": [
+        "audioplayers_platform_interface",
+        "flutter"
+      ]
+    },
+    {
+      "name": "audioplayers_android",
+      "version": "5.3.0",
+      "dependencies": [
+        "audioplayers_platform_interface",
+        "flutter"
+      ]
+    },
+    {
+      "name": "archive",
+      "version": "4.5.2",
+      "dependencies": [
+        "path",
+        "posix"
+      ]
+    },
+    {
+      "name": "webview_flutter",
+      "version": "4.14.1",
+      "dependencies": [
+        "flutter",
+        "webview_flutter_android",
+        "webview_flutter_platform_interface",
+        "webview_flutter_wkwebview"
+      ]
+    },
+    {
+      "name": "webview_flutter_wkwebview",
+      "version": "3.26.2",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "path",
+        "webview_flutter_platform_interface"
+      ]
+    },
+    {
+      "name": "webview_flutter_android",
+      "version": "4.14.1",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "webview_flutter_platform_interface"
       ]
     },
     {
@@ -293,23 +427,14 @@
       ]
     },
     {
-      "name": "http_parser",
-      "version": "4.1.2",
-      "dependencies": [
-        "collection",
-        "source_span",
-        "string_scanner",
-        "typed_data"
-      ]
+      "name": "fixnum",
+      "version": "1.1.1",
+      "dependencies": []
     },
     {
-      "name": "posix",
-      "version": "6.5.4",
-      "dependencies": [
-        "ffi",
-        "meta",
-        "path"
-      ]
+      "name": "crypto",
+      "version": "3.0.8",
+      "dependencies": []
     },
     {
       "name": "path_provider_windows",
@@ -362,21 +487,21 @@
       ]
     },
     {
-      "name": "vm_service",
-      "version": "15.4.0",
-      "dependencies": []
-    },
-    {
-      "name": "typed_data",
-      "version": "1.4.0",
+      "name": "http_parser",
+      "version": "4.1.2",
       "dependencies": [
-        "collection"
+        "collection",
+        "source_span",
+        "string_scanner",
+        "typed_data"
       ]
     },
     {
-      "name": "ffi",
-      "version": "2.2.0",
-      "dependencies": []
+      "name": "flutter_web_plugins",
+      "version": "0.0.0",
+      "dependencies": [
+        "flutter"
+      ]
     },
     {
       "name": "plugin_platform_interface",
@@ -384,6 +509,34 @@
       "dependencies": [
         "meta"
       ]
+    },
+    {
+      "name": "posix",
+      "version": "6.5.4",
+      "dependencies": [
+        "ffi",
+        "meta",
+        "path"
+      ]
+    },
+    {
+      "name": "webview_flutter_platform_interface",
+      "version": "2.15.1",
+      "dependencies": [
+        "flutter",
+        "meta",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "vm_service",
+      "version": "15.4.0",
+      "dependencies": []
+    },
+    {
+      "name": "ffi",
+      "version": "2.2.0",
+      "dependencies": []
     },
     {
       "name": "platform",
@@ -433,6 +586,13 @@
         "package_config",
         "path",
         "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "typed_data",
+      "version": "1.4.0",
+      "dependencies": [
+        "collection"
       ]
     },
     {
@@ -504,11 +664,6 @@
         "meta",
         "pub_semver"
       ]
-    },
-    {
-      "name": "crypto",
-      "version": "3.0.8",
-      "dependencies": []
     }
   ],
   "configVersion": 1

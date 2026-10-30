@@ -36,8 +36,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   get: ^4.7.3
   get_storage: ^2.1.1
-#  google_mobile_ads: ^9.2.0
+  google_mobile_ads: ^9.2.0
   lottie: ^3.6.1
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:

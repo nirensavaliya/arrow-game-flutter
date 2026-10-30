@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:arrow/screen/game/store/game_store_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -388,13 +387,12 @@ class _GameIntroScreenState extends State<GameIntroScreen>
             ],
           ),
         ),
-        // Settings button
-        _glassIconButton(icon: Icons.settings_rounded, onTap: _openSettings),
-
-        const SizedBox(width: 9),
 
         // Coin pill
         _buildCoinPill(),
+        const SizedBox(width: 9),
+        // Settings button
+        _glassIconButton(icon: Icons.settings_rounded, onTap: _openSettings),
       ],
     );
   }
@@ -403,7 +401,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
   Widget _buildCoinPill() {
     return GestureDetector(
       onTap: () {
-        Get.to(() => const GameStoreScreen());
+        // Get.to(() => const GameStoreScreen());
       },
       child: Container(
         height: 38,
@@ -442,7 +440,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
               child: const Icon(
                 Icons.monetization_on_rounded,
                 color: Color(0xFF8B4B00),
-                size: 19,
+                size: 20,
               ),
             ),
 

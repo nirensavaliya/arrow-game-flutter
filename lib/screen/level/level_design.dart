@@ -109,12 +109,185 @@ bool _ring(double x, double y, double outer, double inner) {
   return r <= outer && r >= inner;
 }
 
-bool _star(double x, double y, {int points = 5}) {
-  final r = _distance(x, y);
-  final a = _angle(x, y);
-  final edge = 0.64 + 0.33 * math.cos(points * (a + math.pi / 2));
+double _ab(double v) => v.abs();
 
-  return r <= edge;
+double _frac(double v) => v - v.floorToDouble();
+
+/// Rounded rectangle with corner radius [radius].
+bool _rrect(
+  double x,
+  double y,
+  double x1,
+  double y1,
+  double x2,
+  double y2,
+  double radius,
+) {
+  final l = math.min(x1, x2);
+  final rt = math.max(x1, x2);
+  final t = math.min(y1, y2);
+  final b = math.max(y1, y2);
+
+  if (x < l || x > rt || y < t || y > b) return false;
+
+  final rad = math.min(radius, math.min((rt - l) / 2, (b - t) / 2));
+  final cx = x.clamp(l + rad, rt - rad).toDouble();
+  final cy = y.clamp(t + rad, b - rad).toDouble();
+
+  final dx = x - cx;
+  final dy = y - cy;
+
+  return dx * dx + dy * dy <= rad * rad;
+}
+
+/// Regular polygon with [n] sides.
+bool _regular(
+  double x,
+  double y,
+  int n,
+  double rad, {
+  double rot = -math.pi / 2,
+}) {
+  return _poly(
+    x,
+    y,
+    List.generate(n, (i) {
+      final a = rot + i * 2 * math.pi / n;
+      return (math.cos(a) * rad, math.sin(a) * rad);
+    }),
+  );
+}
+
+/// Star polygon with [n] points (outer and inner radius).
+bool _starPoly(
+  double x,
+  double y,
+  int n,
+  double outer,
+  double inner, {
+  double rot = -math.pi / 2,
+}) {
+  final pts = <(double, double)>[];
+
+  for (var i = 0; i < n * 2; i++) {
+    final a = rot + i * math.pi / n;
+    final rad = i.isEven ? outer : inner;
+    pts.add((math.cos(a) * rad, math.sin(a) * rad));
+  }
+
+  return _poly(x, y, pts);
+}
+
+/// [count] circles placed around the centre.
+bool _petals(
+  double x,
+  double y,
+  int count,
+  double dist,
+  double radius, {
+  double rot = -math.pi / 2,
+}) {
+  for (var i = 0; i < count; i++) {
+    final a = rot + i * 2 * math.pi / count;
+    if (_ell(x, y, math.cos(a) * dist, math.sin(a) * dist, radius, radius)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// [count] thick lines going out from the centre (r0 to r1).
+bool _rays(
+  double x,
+  double y,
+  int count,
+  double r0,
+  double r1,
+  double w, {
+  double rot = 0,
+}) {
+  for (var i = 0; i < count; i++) {
+    final a = rot + i * 2 * math.pi / count;
+    if (_seg(
+      x,
+      y,
+      math.cos(a) * r0,
+      math.sin(a) * r0,
+      math.cos(a) * r1,
+      math.sin(a) * r1,
+      w,
+    )) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Folds the plane into one of [n] mirrored sectors. Returns (u, v) where u
+/// runs along the nearest axis and v is the distance from it (always >= 0).
+(double, double) _fold(double x, double y, int n) {
+  final r = _distance(x, y);
+  final sector = 2 * math.pi / n;
+  final d = ((_angle(x, y) + sector / 2) % sector) - sector / 2;
+
+  return (r * math.cos(d), (r * math.sin(d)).abs());
+}
+
+bool _snow(double x, double y) {
+  final (u, v) = _fold(x, y, 6);
+
+  return _seg(u, v, 0, 0, 0.95, 0, 0.07) ||
+      _seg(
+        u,
+        v,
+        0.45,
+        0,
+        0.45 + math.cos(0.8) * 0.3,
+        math.sin(0.8) * 0.3,
+        0.055,
+      ) ||
+      _seg(
+        u,
+        v,
+        0.72,
+        0,
+        0.72 + math.cos(0.8) * 0.2,
+        math.sin(0.8) * 0.2,
+        0.055,
+      );
+}
+
+bool _cogShape(double x, double y) {
+  final r = _distance(x, y);
+  final tooth = math.cos(8 * _angle(x, y)) > 0.2 ? 0.95 : 0.72;
+
+  return r <= tooth && r >= 0.28;
+}
+
+bool _planet(double x, double y) {
+  if (_ell(x, y, 0, 0, 0.55, 0.55)) return true;
+
+  final c = math.cos(-0.45);
+  final s = math.sin(-0.45);
+  final xr = x * c - y * s;
+  final yr = x * s + y * c;
+  final e = (xr / 0.98) * (xr / 0.98) + (yr / 0.30) * (yr / 0.30);
+
+  return e <= 1 && e >= 0.55;
+}
+
+bool _octopus(double x, double y) {
+  if (_ell(x, y, 0, -0.35, 0.64, 0.56) &&
+      !_ell(x.abs(), y, 0.25, -0.4, 0.09, 0.11)) {
+    return true;
+  }
+
+  for (var i = 0; i < 6; i++) {
+    final x0 = -0.5 + i * 0.2;
+    final x1 = x0 + (i.isEven ? 0.12 : -0.12);
+    if (_seg(x, y, x0, 0.05, x1, 0.95, 0.08)) return true;
+  }
+  return false;
 }
 
 // =============================================================================
@@ -740,7 +913,6 @@ class LevelDesigns {
     'Plus',
     'Chevron',
     'Bolt',
-    'Flag',
     'Key',
     'Umbrella',
     'Cactus',
@@ -784,10 +956,10 @@ class LevelDesigns {
   // hold the growing arrow count.
   static const List<(String, String)> _recipes = [
     // ---- Levels 2-6 (Easy): solid convex shapes ----
-    ('Square', 'Shape'), // 2
+    ('Rounded Square', 'Shape'), // 2
     ('Circle', 'Shape'), // 3
     ('Triangle', 'Shape'), // 4
-    ('Rhombus', 'Shape'), // 5
+    ('Diamond', 'Shape'), // 5
     ('Hexagon', 'Shape'), // 6
     // ---- Levels 7-10 (Easy+): rounder solid shapes ----
     ('Pentagon', 'Shape'), // 7
@@ -796,21 +968,21 @@ class LevelDesigns {
     ('Droplet', 'Nature'), // 10
     // ---- Levels 11-15 (Normal): first concave shapes ----
     ('Star', 'Shape'), // 11
-    ('Moon', 'Nature'), // 12
+    ('Crescent', 'Nature'), // 12
     ('Arrow Up', 'Shape'), // 13
-    ('Home', 'Object'), // 14
-    ('Tree', 'Nature'), // 15
+    ('House', 'Object'), // 14
+    ('Pine Tree', 'Nature'), // 15
     // ---- Levels 16-20 (Medium): icons with small details ----
     ('Mushroom', 'Nature'), // 16
     ('Fish', 'Animal'), // 17
     ('Bell', 'Object'), // 18
-    ('Cup', 'Object'), // 19
+    ('Coffee Cup', 'Object'), // 19
     ('Crown', 'Object'), // 20
     // ---- Levels 21-25 (Medium-Hard) ----
     ('Shield', 'Object'), // 21
     ('Cat Face', 'Animal'), // 22
     ('Rocket', 'Object'), // 23
-    ('Flag', 'Object'), // 24
+    ('Apple', 'Nature'), // 24
     ('Plus', 'Shape'), // 25
     // ---- Levels 26-30 (Hard): animals with heads and limbs ----
     ('Duck', 'Animal'), // 26
@@ -820,7 +992,7 @@ class LevelDesigns {
     ('Turtle', 'Animal'), // 30
     // ---- Levels 31-35 (Hard): larger animals and objects ----
     ('Whale', 'Animal'), // 31
-    ('Dog', 'Animal'), // 32
+    ('Elephant', 'Animal'), // 32
     ('Butterfly', 'Animal'), // 33
     ('Flower', 'Nature'), // 34
     ('Sailboat', 'Object'), // 35
@@ -965,813 +1137,672 @@ class LevelDesigns {
   }
 
   // ===========================================================================
-  // EXTRA SHAPE HELPERS
-  // ===========================================================================
-
-  static bool _regular(
-    double x,
-    double y,
-    int n,
-    double rad, {
-    double rot = -math.pi / 2,
-  }) {
-    return _poly(
-      x,
-      y,
-      List.generate(n, (i) {
-        final a = rot + i * 2 * math.pi / n;
-        return (math.cos(a) * rad, math.sin(a) * rad);
-      }),
-    );
-  }
-
-  static bool _petals(
-    double x,
-    double y,
-    int count,
-    double dist,
-    double radius, {
-    double rot = -math.pi / 2,
-  }) {
-    for (var i = 0; i < count; i++) {
-      final a = rot + i * 2 * math.pi / count;
-      if (_ell(x, y, math.cos(a) * dist, math.sin(a) * dist, radius, radius)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  static bool _snow(double x, double y) {
-    for (var i = 0; i < 6; i++) {
-      final a = i * math.pi / 3;
-      final ex = math.cos(a) * 0.95;
-      final ey = math.sin(a) * 0.95;
-
-      if (_seg(x, y, 0, 0, ex, ey, 0.06)) return true;
-
-      for (final t in [0.4, 0.7]) {
-        final bx = ex * t;
-        final by = ey * t;
-
-        for (final s in [-1.0, 1.0]) {
-          if (_seg(
-            x,
-            y,
-            bx,
-            by,
-            bx + math.cos(a + s * 0.8) * 0.25,
-            by + math.sin(a + s * 0.8) * 0.25,
-            0.045,
-          )) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
-
-  static bool _mandala(double x, double y) {
-    if (_petals(x, y, 8, 0.6, 0.22)) return true;
-    if (_ell(x, y, 0, 0, 0.25, 0.25)) return true;
-    if (_ring(x, y, 0.95, 0.85)) return true;
-
-    for (var i = 0; i < 8; i++) {
-      final a = i * math.pi / 4 + math.pi / 8;
-      if (_seg(x, y, 0, 0, math.cos(a) * 0.9, math.sin(a) * 0.9, 0.04)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  static bool _cog(double x, double y) {
-    final r = _distance(x, y);
-    final a = _angle(x, y);
-    final tooth = math.cos(8 * a) > 0.2 ? 0.95 : 0.72;
-    return r <= tooth && r >= 0.28;
-  }
-
-  static bool _sun(double x, double y) {
-    if (_distance(x, y) <= 0.45) return true;
-    for (var i = 0; i < 12; i++) {
-      final a = i * math.pi / 6;
-      if (_seg(
-        x,
-        y,
-        math.cos(a) * 0.4,
-        math.sin(a) * 0.4,
-        math.cos(a) * 0.95,
-        math.sin(a) * 0.95,
-        0.06,
-      )) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  static bool _planet(double x, double y) {
-    if (_ell(x, y, 0, 0, 0.55, 0.55)) return true;
-
-    final c = math.cos(-0.45);
-    final s = math.sin(-0.45);
-    final xr = x * c - y * s;
-    final yr = x * s + y * c;
-    final e = (xr / 0.98) * (xr / 0.98) + (yr / 0.30) * (yr / 0.30);
-
-    return e <= 1 && e >= 0.55;
-  }
-
-  static bool _peacock(double x, double y) {
-    if (_ell(x, y, 0, 0.6, 0.15, 0.36)) return true;
-    if (_ell(x, y, 0, 0.2, 0.3, 0.3)) return true;
-
-    for (var i = 0; i < 7; i++) {
-      final a = -math.pi + (i + 0.5) * math.pi / 7;
-      if (_ell(x, y, math.cos(a) * 0.62, 0.15 + math.sin(a) * 0.62, 0.2, 0.2)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  static bool _octopus(double x, double y) {
-    if (_ell(x, y, 0, -0.35, 0.62, 0.55) &&
-        !_ell(x.abs(), y, 0.25, -0.4, 0.08, 0.1)) {
-      return true;
-    }
-
-    for (var i = 0; i < 6; i++) {
-      final x0 = -0.5 + i * 0.2;
-      final x1 = x0 + (i.isEven ? 0.1 : -0.1);
-      if (_seg(x, y, x0, 0.05, x1, 0.9, 0.07)) return true;
-    }
-    return false;
-  }
-
-  static bool _pagoda(double x, double y) {
-    for (var i = 0; i < 3; i++) {
-      final t = -0.7 + i * 0.45;
-      final w = 0.4 + 0.2 * i;
-
-      if (_poly(x, y, [
-            (-w - 0.1, t + 0.18),
-            (-w + 0.15, t),
-            (w - 0.15, t),
-            (w + 0.1, t + 0.18),
-          ]) ||
-          _rect(x, y, -w + 0.15, t + 0.18, w - 0.15, t + 0.43)) {
-        return true;
-      }
-    }
-
-    return _rect(x, y, -0.9, 0.63, 0.9, 0.8) ||
-        _seg(x, y, 0, -0.98, 0, -0.65, 0.035);
-  }
-
-  static bool _temple(double x, double y) {
-    if (_poly(x, y, [(-0.95, -0.4), (0, -0.9), (0.95, -0.4)])) return true;
-    if (_rect(x, y, -0.95, -0.4, 0.95, -0.25)) return true;
-
-    for (var i = 0; i < 5; i++) {
-      final cx = -0.72 + i * 0.36;
-      if (_rect(x, y, cx - 0.07, -0.25, cx + 0.07, 0.65)) return true;
-    }
-
-    return _rect(x, y, -0.98, 0.65, 0.98, 0.78) ||
-        _rect(x, y, -0.88, 0.78, 0.88, 0.9);
-  }
-
-  static bool _bridge(double x, double y) {
-    final ax = x.abs();
-
-    if (_rect(x, y, -0.98, 0.4, 0.98, 0.55)) return true;
-    if (_rect(x, y, -0.6, -0.6, -0.5, 0.55)) return true;
-    if (_rect(x, y, 0.5, -0.6, 0.6, 0.55)) return true;
-
-    if (_seg(x, y, -0.98, 0.38, -0.55, -0.55, 0.035)) return true;
-    if (_seg(x, y, 0.98, 0.38, 0.55, -0.55, 0.035)) return true;
-
-    if (ax <= 0.55) {
-      final k = ax / 0.55;
-      final yc = -0.55 + 0.55 * (1 - k * k);
-
-      if ((y - yc).abs() <= 0.04) return true;
-
-      if (y > yc && y < 0.4) {
-        final u = x / 0.11;
-        if ((u - u.roundToDouble()).abs() * 0.11 < 0.02) return true;
-      }
-    }
-    return false;
-  }
-
-  static bool _tower(double x, double y) {
-    final body = _poly(x.abs(), y, [
-      (0, -0.98),
-      (0.08, -0.6),
-      (0.2, -0.1),
-      (0.45, 0.5),
-      (0.8, 0.95),
-      (0.55, 0.95),
-      (0.35, 0.62),
-      (0, 0.62),
-    ]);
-
-    return body ||
-        _rect(x, y, -0.3, -0.1, 0.3, 0.0) ||
-        _rect(x, y, -0.5, 0.5, 0.5, 0.62);
-  }
-
-  static bool _maze(double x, double y) {
-    return (_rect(x, y, -0.95, -0.95, 0.95, 0.95) &&
-            !_rect(x, y, -0.81, -0.81, 0.81, 0.81)) ||
-        _rect(x, y, -0.81, -0.4, 0.3, -0.26) ||
-        _rect(x, y, 0.3, -0.4, 0.44, 0.5) ||
-        _rect(x, y, -0.5, 0.15, 0.44, 0.29) ||
-        _rect(x, y, -0.5, 0.15, -0.36, 0.81);
-  }
-
-  // ===========================================================================
   // SHAPE LIBRARY — 79 silhouettes
+  //
+  // Every shape lives in a -1..1 box (y grows downward). Helper values:
+  //   ax = |x| (mirror left/right), ay = |y|, r = distance from the centre.
   // ===========================================================================
 
   static ShapeFn _shapeFor(String name, int level) {
     return (double x, double y) {
       final ax = x.abs();
+      final ay = y.abs();
       final r = _distance(x, y);
       final angle = _angle(x, y);
 
       switch (name) {
-        // ------------------------- Simple shapes -------------------------
-        case 'Square':
-          return _rect(x, y, -0.85, -0.85, 0.85, 0.85);
-
-        case 'Triangle':
-          return _poly(x, y, [(0, -0.9), (0.95, 0.8), (-0.95, 0.8)]);
+        // ------------------------- Easy: solid shapes --------------------
+        case 'Rounded Square':
+          return _rrect(x, y, -0.88, -0.88, 0.88, 0.88, 0.3);
 
         case 'Circle':
           return r <= 0.92;
 
-        case 'Rhombus':
-          return ax / 0.65 + y.abs() / 0.95 <= 1;
+        case 'Triangle':
+          return _poly(x, y, [(0, -0.95), (0.95, 0.7), (-0.95, 0.7)]);
 
-        case 'Plus':
-          return _rect(x, y, -0.3, -0.9, 0.3, 0.9) ||
-              _rect(x, y, -0.9, -0.3, 0.9, 0.3);
-
-        case 'Heart':
-          return _heart(x, y);
-
-        case 'Star':
-          return _star(x, y);
-
-        case 'Pentagon':
-          return _regular(x, y, 5, 0.98);
-
-        case 'Ring':
-          return _ring(x, y, 0.92, 0.5);
-
-        // ------------------------- Simple icons --------------------------
-        case 'Droplet':
-          return _ell(x, y, 0, 0.25, 0.62, 0.62) ||
-              _poly(x, y, [(0, -0.95), (-0.55, 0.1), (0.55, 0.1)]);
-
-        case 'Moon':
-          return _ell(x, y, 0, 0, 0.92, 0.92) &&
-              !_ell(x, y, 0.38, -0.12, 0.72, 0.78);
+        case 'Diamond':
+          return ax / 0.72 + ay / 0.95 <= 1;
 
         case 'Hexagon':
           return _regular(x, y, 6, 0.98, rot: 0);
 
+        case 'Pentagon':
+          return _regular(x, y, 5, 0.98);
+
         case 'Octagon':
           return _regular(x, y, 8, 0.98, rot: math.pi / 8);
+
+        case 'Heart':
+          return _heart(x, y);
+
+        case 'Droplet':
+          return _ell(x, y, 0, 0.3, 0.6, 0.6) ||
+              _poly(x, y, [(0, -0.95), (0.526, 0.012), (-0.526, 0.012)]);
+
+        // ------------------------- Normal: first concave shapes ----------
+        case 'Star':
+          return _starPoly(x, y, 5, 0.98, 0.42);
+
+        case 'Crescent':
+          return _ell(x, y, -0.1, 0, 0.9, 0.9) &&
+              !_ell(x, y, 0.3, -0.1, 0.75, 0.78);
 
         case 'Arrow Up':
           return _poly(x, y, [
             (0, -0.95),
-            (0.7, -0.1),
-            (0.28, -0.1),
-            (0.28, 0.9),
-            (-0.28, 0.9),
-            (-0.28, -0.1),
-            (-0.7, -0.1),
+            (0.75, -0.05),
+            (0.3, -0.05),
+            (0.3, 0.92),
+            (-0.3, 0.92),
+            (-0.3, -0.05),
+            (-0.75, -0.05),
           ]);
 
-        case 'Chevron':
-          return _poly(x, y, [
-            (-0.9, -0.8),
-            (-0.35, -0.8),
-            (0.9, 0),
-            (-0.35, 0.8),
-            (-0.9, 0.8),
-            (0.35, 0),
-          ]);
+        case 'House':
+          return (_poly(x, y, [(-0.98, -0.05), (0, -0.92), (0.98, -0.05)]) ||
+                  _rect(x, y, -0.72, -0.05, 0.72, 0.9) ||
+                  _rect(x, y, 0.38, -0.8, 0.6, -0.3)) &&
+              !_rrect(x, y, -0.17, 0.35, 0.17, 0.95, 0.08);
 
-        case 'Bolt':
-          return _poly(x, y, [
-            (0.2, -0.95),
-            (-0.65, 0.1),
-            (-0.1, 0.1),
-            (-0.25, 0.95),
-            (0.65, -0.15),
-            (0.1, -0.15),
-          ]);
+        case 'Pine Tree':
+          return _poly(x, y, [(0, -0.95), (0.5, -0.3), (-0.5, -0.3)]) ||
+              _poly(x, y, [(0, -0.6), (0.7, 0.15), (-0.7, 0.15)]) ||
+              _poly(x, y, [(0, -0.25), (0.92, 0.65), (-0.92, 0.65)]) ||
+              _rect(x, y, -0.15, 0.6, 0.15, 0.95);
 
-        case 'Flag':
-          return _rect(x, y, -0.85, -0.95, -0.7, 0.95) ||
-              _poly(x, y, [
-                (-0.7, -0.9),
-                (0.9, -0.9),
-                (0.5, -0.45),
-                (0.9, 0),
-                (-0.7, 0),
-              ]);
-
-        case 'Tree':
-          return _ell(x, y, 0, -0.3, 0.68, 0.62) ||
-              _rect(x, y, -0.12, 0.1, 0.12, 0.92);
-
+        // ------------------------- Medium: icons with details ------------
         case 'Mushroom':
-          return (_ell(x, y, 0, -0.1, 0.92, 0.7) && y < 0.15) ||
-              _rect(x, y, -0.28, 0.1, 0.28, 0.85);
+          return ((_ell(x, y, 0, 0.05, 0.95, 0.78) && y < 0.05) ||
+                  _rrect(x, y, -0.3, 0.0, 0.3, 0.92, 0.1)) &&
+              !_ell(x, y, -0.4, -0.25, 0.14, 0.14) &&
+              !_ell(x, y, 0.35, -0.3, 0.12, 0.12) &&
+              !_ell(x, y, 0.02, -0.45, 0.08, 0.08);
 
         case 'Fish':
-          return (_ell(x, y, -0.15, 0, 0.7, 0.45) ||
-                  _poly(x, y, [(0.4, 0), (0.95, -0.45), (0.95, 0.45)])) &&
-              !_ell(x, y, -0.5, -0.1, 0.07, 0.07);
-
-        case 'Cat Face':
-          return (_ell(x, y, 0, 0.2, 0.75, 0.65) ||
-                  _poly(x, y, [(-0.75, -0.1), (-0.7, -0.85), (-0.15, -0.4)]) ||
-                  _poly(x, y, [(0.75, -0.1), (0.7, -0.85), (0.15, -0.4)])) &&
-              !_ell(ax, y, 0.3, 0.1, 0.08, 0.1);
+          return (_ell(x, y, -0.15, 0, 0.72, 0.48) ||
+                  _poly(x, y, [(0.4, 0), (0.98, -0.45), (0.98, 0.45)]) ||
+                  _poly(x, y, [(-0.35, -0.42), (0, -0.8), (0.2, -0.4)])) &&
+              !_ell(x, y, -0.5, -0.08, 0.07, 0.07);
 
         case 'Bell':
-          return (_ell(x, y, 0, -0.1, 0.6, 0.65) && y < 0.4) ||
-              _rect(x, y, -0.8, 0.35, 0.8, 0.55) ||
-              _ell(x, y, 0, 0.7, 0.14, 0.14);
-
-        case 'Cup':
-          return _poly(x, y, [
-                (-0.65, -0.5),
-                (0.55, -0.5),
-                (0.4, 0.7),
-                (-0.5, 0.7),
+          return (_ell(x, y, 0, -0.2, 0.5, 0.55) && y < 0.1) ||
+              _poly(x, y, [
+                (-0.5, -0.2),
+                (0.5, -0.2),
+                (0.78, 0.45),
+                (-0.78, 0.45),
               ]) ||
-              (_ring(x - 0.58, y, 0.34, 0.2) && x > 0.5) ||
-              _rect(x, y, -0.8, 0.7, 0.7, 0.88);
+              _rrect(x, y, -0.88, 0.4, 0.88, 0.56, 0.07) ||
+              _ell(x, y, 0, 0.72, 0.16, 0.16) ||
+              _ell(x, y, 0, -0.82, 0.1, 0.1);
 
-        case 'Home':
-          return (_poly(x, y, [(-0.95, -0.05), (0, -0.9), (0.95, -0.05)]) ||
-                  _rect(x, y, -0.7, -0.05, 0.7, 0.85) ||
-                  _rect(x, y, 0.35, -0.8, 0.6, -0.3)) &&
-              !_rect(x, y, -0.14, 0.4, 0.14, 0.85);
-
-        // ------------------------- Medium designs ------------------------
-        case 'Butterfly':
-          return _poly(ax, y, [(0.05, -0.1), (0.95, -0.85), (0.9, -0.1)]) ||
-              _ell(ax, y, 0.4, 0.45, 0.32, 0.4) ||
-              _ell(ax, y, 0.45, -0.3, 0.4, 0.3) ||
-              _rect(x, y, -0.06, -0.6, 0.06, 0.8);
-
-        case 'Flower':
-          return _petals(x, y + 0.3, 6, 0.4, 0.27) ||
-              _ell(x, y, 0, -0.3, 0.22, 0.22) ||
-              _rect(x, y, -0.06, -0.1, 0.06, 0.95) ||
-              _ell(x, y, 0.27, 0.55, 0.25, 0.1);
-
-        case 'Sailboat':
+        case 'Coffee Cup':
           return _poly(x, y, [
-                (-0.9, 0.4),
-                (0.9, 0.4),
-                (0.55, 0.85),
-                (-0.55, 0.85),
+                (-0.7, -0.45),
+                (0.5, -0.45),
+                (0.38, 0.65),
+                (-0.58, 0.65),
               ]) ||
-              _rect(x, y, -0.04, -0.9, 0.04, 0.4) ||
-              _poly(x, y, [(0.08, -0.85), (0.08, 0.3), (0.85, 0.3)]) ||
-              _poly(x, y, [(-0.08, -0.5), (-0.08, 0.3), (-0.7, 0.3)]);
-
-        case 'Rocket':
-          return (_ell(x, y, 0, -0.1, 0.33, 0.75) ||
-                  _poly(x, y, [(-0.3, 0.2), (-0.7, 0.8), (-0.3, 0.55)]) ||
-                  _poly(x, y, [(0.3, 0.2), (0.7, 0.8), (0.3, 0.55)]) ||
-                  _poly(x, y, [(-0.18, 0.6), (0, 0.98), (0.18, 0.6)])) &&
-              !_ell(x, y, 0, -0.3, 0.12, 0.12);
+              (_ring(x - 0.62, y, 0.36, 0.2) && x > 0.45) ||
+              _rrect(x, y, -0.95, 0.65, 0.75, 0.88, 0.1);
 
         case 'Crown':
-          return _poly(x, y, [
-            (-0.9, 0.7),
-            (-0.9, -0.5),
-            (-0.45, 0),
-            (0, -0.8),
-            (0.45, 0),
-            (0.9, -0.5),
-            (0.9, 0.7),
-          ]);
+          return (_poly(x, y, [
+                    (-0.9, 0.7),
+                    (-0.9, -0.4),
+                    (-0.45, 0.05),
+                    (0, -0.65),
+                    (0.45, 0.05),
+                    (0.9, -0.4),
+                    (0.9, 0.7),
+                  ]) ||
+                  _ell(x, y, -0.9, -0.5, 0.11, 0.11) ||
+                  _ell(x, y, 0, -0.75, 0.11, 0.11) ||
+                  _ell(x, y, 0.9, -0.5, 0.11, 0.11)) &&
+              !_ell(x, y, 0, 0.35, 0.1, 0.1) &&
+              !_ell(ax, y, 0.5, 0.35, 0.08, 0.08);
 
+        // ------------------------- Medium-Hard ---------------------------
         case 'Shield':
           return _poly(x, y, [
                 (-0.8, -0.85),
                 (0.8, -0.85),
-                (0.8, 0.1),
+                (0.8, 0.05),
+                (0.55, 0.5),
                 (0, 0.95),
-                (-0.8, 0.1),
+                (-0.55, 0.5),
+                (-0.8, 0.05),
               ]) &&
-              !_rect(x, y, -0.07, -0.6, 0.07, 0.5);
+              !_starPoly(x, y + 0.1, 5, 0.4, 0.17);
 
-        case 'Key':
-          return _ring(x + 0.5, y, 0.42, 0.2) ||
-              _rect(x, y, -0.1, -0.08, 0.92, 0.08) ||
-              _rect(x, y, 0.6, 0.08, 0.74, 0.35) ||
-              _rect(x, y, 0.78, 0.08, 0.92, 0.28);
+        case 'Cat Face':
+          return (_ell(x, y, 0, 0.2, 0.78, 0.65) ||
+                  _poly(ax, y, [(0.8, 0.0), (0.78, -0.88), (0.2, -0.42)])) &&
+              !_ell(ax, y, 0.3, 0.1, 0.09, 0.12) &&
+              !_poly(x, y, [(-0.08, 0.3), (0.08, 0.3), (0, 0.4)]);
+
+        case 'Rocket':
+          return (_ell(x, y, 0, -0.08, 0.34, 0.8) ||
+                  _poly(ax, y, [(0.28, 0.25), (0.72, 0.85), (0.28, 0.6)]) ||
+                  _poly(x, y, [(-0.17, 0.6), (0, 0.98), (0.17, 0.6)])) &&
+              !_ell(x, y, 0, -0.25, 0.14, 0.14);
+
+        case 'Apple':
+          return _ell(ax, y, 0.3, 0.12, 0.58, 0.66) ||
+              _rect(x, y, -0.07, -0.95, 0.07, -0.4) ||
+              _poly(x, y, [
+                (0.07, -0.78),
+                (0.5, -0.98),
+                (0.56, -0.7),
+                (0.1, -0.55),
+              ]);
+
+        case 'Plus':
+          return _rrect(x, y, -0.3, -0.92, 0.3, 0.92, 0.08) ||
+              _rrect(x, y, -0.92, -0.3, 0.92, 0.3, 0.08);
+
+        // ------------------------- Hard: animals -------------------------
+        case 'Duck':
+          return (_ell(x, y, -0.1, 0.3, 0.72, 0.5) ||
+                  _ell(x, y, 0.38, -0.42, 0.3, 0.3) ||
+                  _seg(x, y, 0.38, -0.25, 0.25, 0.15, 0.2) ||
+                  _poly(x, y, [(0.64, -0.5), (1.0, -0.38), (0.64, -0.28)]) ||
+                  _poly(x, y, [(-0.7, 0.15), (-1.0, -0.15), (-0.55, 0.4)])) &&
+              !_ell(x, y, 0.45, -0.5, 0.05, 0.05);
+
+        case 'Penguin':
+          return (_ell(x, y, 0, 0.05, 0.62, 0.9) ||
+                  _ell(ax, y, 0.3, 0.93, 0.24, 0.07) ||
+                  _poly(ax, y, [(0.5, -0.1), (0.95, 0.35), (0.55, 0.42)])) &&
+              !_ell(ax, y, 0.2, -0.5, 0.06, 0.06);
+
+        case 'Rabbit':
+          return (_ell(ax, y, 0.22, -0.62, 0.13, 0.36) ||
+                  _ell(x, y, 0, 0.0, 0.42, 0.38) ||
+                  _ell(x, y, 0, 0.6, 0.62, 0.38) ||
+                  _ell(x, y, 0.6, 0.78, 0.14, 0.14)) &&
+              !_ell(ax, y, 0.16, -0.05, 0.05, 0.07);
+
+        case 'Owl':
+          return (_ell(x, y, 0, 0.1, 0.68, 0.85) ||
+                  _poly(ax, y, [(0.2, -0.7), (0.58, -0.98), (0.64, -0.45)])) &&
+              !(_ell(ax, y, 0.28, -0.2, 0.22, 0.22) &&
+                  !_ell(ax, y, 0.28, -0.2, 0.09, 0.09)) &&
+              !_poly(x, y, [(-0.08, -0.02), (0.08, -0.02), (0, 0.14)]);
+
+        case 'Turtle':
+          return (_ell(x, y, 0, 0.2, 0.8, 0.65) && y < 0.3) ||
+              _ell(x, y, 0.88, 0.1, 0.2, 0.18) ||
+              _rrect(x, y, -0.6, 0.25, -0.32, 0.7, 0.06) ||
+              _rrect(x, y, 0.3, 0.25, 0.58, 0.7, 0.06) ||
+              _rect(x, y, -0.8, 0.2, 0.8, 0.34) ||
+              _poly(x, y, [(-0.8, 0.25), (-1.0, 0.4), (-0.78, 0.38)]);
+
+        // ------------------------- Hard: larger animals / objects --------
+        case 'Whale':
+          return (_ell(x, y, -0.1, 0.15, 0.82, 0.52) ||
+                  _poly(x, y, [
+                    (0.55, 0.1),
+                    (0.8, -0.05),
+                    (0.98, -0.5),
+                    (1.0, -0.05),
+                    (0.85, 0.2),
+                    (0.6, 0.3),
+                  ]) ||
+                  _seg(x, y, -0.45, -0.3, -0.45, -0.62, 0.05) ||
+                  _ell(x, y, -0.45, -0.7, 0.16, 0.07)) &&
+              !_ell(x, y, -0.62, 0.05, 0.05, 0.05);
+
+        case 'Elephant':
+          return (_ell(x, y, -0.1, 0.05, 0.62, 0.45) ||
+                  _ell(x, y, 0.52, -0.05, 0.32, 0.36) ||
+                  _seg(x, y, 0.65, 0.12, 0.8, 0.7, 0.1) ||
+                  _seg(x, y, 0.8, 0.7, 0.95, 0.8, 0.09) ||
+                  _rrect(x, y, -0.62, 0.3, -0.42, 0.92, 0.05) ||
+                  _rrect(x, y, -0.34, 0.3, -0.14, 0.92, 0.05) ||
+                  _rrect(x, y, 0.0, 0.3, 0.2, 0.92, 0.05) ||
+                  _rrect(x, y, 0.28, 0.3, 0.48, 0.92, 0.05) ||
+                  _seg(x, y, -0.7, 0.0, -0.92, 0.4, 0.05)) &&
+              !_ell(x, y, 0.6, -0.12, 0.04, 0.04);
+
+        case 'Butterfly':
+          return (_ell(ax, y, 0.5, -0.4, 0.48, 0.4) ||
+                  _ell(ax, y, 0.38, 0.42, 0.34, 0.4) ||
+                  _rrect(x, y, -0.07, -0.5, 0.07, 0.85, 0.07) ||
+                  _ell(x, y, 0, -0.55, 0.1, 0.1) ||
+                  _seg(ax, y, 0.05, -0.55, 0.3, -0.92, 0.04)) &&
+              !_ell(ax, y, 0.55, -0.4, 0.12, 0.12);
+
+        case 'Flower':
+          return _petals(x, y + 0.3, 6, 0.38, 0.28) ||
+              _ell(x, y, 0, -0.3, 0.2, 0.2) ||
+              _rrect(x, y, -0.07, -0.1, 0.07, 0.95, 0.03) ||
+              _ell(x, y, 0.3, 0.55, 0.28, 0.1) ||
+              _ell(x, y, -0.3, 0.35, 0.28, 0.1);
+
+        case 'Sailboat':
+          return _poly(x, y, [
+                (-0.92, 0.4),
+                (0.92, 0.4),
+                (0.6, 0.88),
+                (-0.6, 0.88),
+              ]) ||
+              _rect(x, y, -0.05, -0.92, 0.05, 0.4) ||
+              _poly(x, y, [(0.1, -0.88), (0.1, 0.3), (0.88, 0.3)]) ||
+              _poly(x, y, [(-0.1, -0.55), (-0.1, 0.3), (-0.72, 0.3)]);
+
+        // ------------------------- Very Hard: complex silhouettes --------
+        case 'Lighthouse':
+          return (_poly(x, y, [
+                    (-0.38, -0.35),
+                    (0.38, -0.35),
+                    (0.58, 0.85),
+                    (-0.58, 0.85),
+                  ]) ||
+                  _rrect(x, y, -0.5, -0.58, 0.5, -0.32, 0.05) ||
+                  _poly(x, y, [(-0.58, -0.58), (0, -0.98), (0.58, -0.58)]) ||
+                  _rect(x, y, -0.82, 0.85, 0.82, 0.98) ||
+                  _poly(ax, y, [(0.5, -0.5), (0.98, -0.72), (0.98, -0.38)])) &&
+              !_rect(x, y, -0.14, -0.5, 0.14, -0.4) &&
+              !_rect(x, y, -0.12, 0.05, 0.12, 0.25);
+
+        case 'Castle':
+          return (_rect(x, y, -0.8, -0.15, 0.8, 0.9) ||
+                  _rect(x, y, -0.95, -0.8, -0.5, 0.9) ||
+                  _rect(x, y, 0.5, -0.8, 0.95, 0.9) ||
+                  _poly(ax, y, [(0.45, -0.8), (0.725, -1.0), (1.0, -0.8)]) ||
+                  _rect(x, y, -0.1, -0.3, 0.1, -0.15) ||
+                  _rect(ax, y, 0.2, -0.3, 0.4, -0.15)) &&
+              !(_rect(x, y, -0.15, 0.35, 0.15, 0.95) ||
+                  _ell(x, y, 0, 0.35, 0.15, 0.15)) &&
+              !_rect(ax, y, 0.66, -0.5, 0.78, -0.3);
 
         case 'Hourglass':
           return _poly(x, y, [
-                (-0.75, -0.9),
-                (0.75, -0.9),
-                (0.1, 0),
-                (0.75, 0.9),
-                (-0.75, 0.9),
-                (-0.1, 0),
+                (-0.75, -0.88),
+                (0.75, -0.88),
+                (0.12, 0),
+                (0.75, 0.88),
+                (-0.75, 0.88),
+                (-0.12, 0),
               ]) ||
-              _rect(x, y, -0.85, -0.98, 0.85, -0.85) ||
-              _rect(x, y, -0.85, 0.85, 0.85, 0.98);
+              _rrect(x, y, -0.9, -0.98, 0.9, -0.84, 0.05) ||
+              _rrect(x, y, -0.9, 0.84, 0.9, 0.98, 0.05);
 
         case 'Trophy':
           return _poly(x, y, [
-                (-0.6, -0.8),
-                (0.6, -0.8),
-                (0.4, 0.1),
-                (-0.4, 0.1),
+                (-0.62, -0.85),
+                (0.62, -0.85),
+                (0.45, 0.05),
+                (0.2, 0.2),
+                (-0.2, 0.2),
+                (-0.45, 0.05),
               ]) ||
-              (_ring(x + 0.65, y + 0.45, 0.3, 0.17) && x < -0.55) ||
-              (_ring(x - 0.65, y + 0.45, 0.3, 0.17) && x > 0.55) ||
-              _rect(x, y, -0.1, 0.1, 0.1, 0.6) ||
-              _rect(x, y, -0.5, 0.6, 0.5, 0.85);
+              (_ring(ax - 0.7, y + 0.45, 0.3, 0.17) && ax > 0.55) ||
+              _rect(x, y, -0.1, 0.2, 0.1, 0.65) ||
+              _rrect(x, y, -0.5, 0.65, 0.5, 0.9, 0.05);
 
         case 'Umbrella':
-          return (_ell(x, y, 0, -0.1, 0.95, 0.7) && y < 0.15) ||
-              _rect(x, y, -0.04, 0.1, 0.04, 0.7) ||
+          return (_ell(x, y, 0, -0.1, 0.98, 0.75) && y < 0.1) ||
+              _ell(x, y, 0, 0.1, 0.33, 0.12) ||
+              _ell(ax, y, 0.66, 0.1, 0.32, 0.12) ||
+              _rect(x, y, -0.05, 0.1, 0.05, 0.7) ||
               (_ring(x + 0.16, y - 0.7, 0.16, 0.07) && y > 0.7);
 
-        case 'Cactus':
-          return _rect(x, y, -0.22, -0.8, 0.22, 0.9) ||
-              _ell(x, y, 0, -0.8, 0.22, 0.12) ||
-              _rect(x, y, -0.65, -0.3, -0.22, -0.1) ||
-              _rect(x, y, -0.65, -0.6, -0.45, -0.1) ||
-              _rect(x, y, 0.22, 0.0, 0.65, 0.2) ||
-              _rect(x, y, 0.45, -0.35, 0.65, 0.2);
-
-        case 'Penguin':
-          return (_ell(x, y, 0, 0.05, 0.6, 0.85) ||
-                  _ell(ax, y, 0.28, 0.88, 0.2, 0.08) ||
-                  _poly(ax, y, [(0.5, -0.1), (0.9, 0.3), (0.55, 0.35)])) &&
-              !_ell(ax, y, 0.2, -0.5, 0.06, 0.06);
-
-        case 'Duck':
-          return _ell(x, y, -0.1, 0.3, 0.7, 0.5) ||
-              _ell(x, y, 0.35, -0.45, 0.32, 0.32) ||
-              _poly(x, y, [(0.62, -0.45), (0.98, -0.35), (0.62, -0.25)]) ||
-              _poly(x, y, [(-0.7, 0.15), (-0.98, -0.1), (-0.6, 0.4)]);
-
-        case 'Rabbit':
-          return _ell(ax, y, 0.22, -0.6, 0.12, 0.38) ||
-              _ell(x, y, 0, 0.0, 0.45, 0.4) ||
-              _ell(x, y, 0, 0.55, 0.55, 0.4) ||
-              _ell(x, y, 0.5, 0.7, 0.14, 0.14);
-
-        case 'Owl':
-          return (_ell(x, y, 0, 0.1, 0.65, 0.85) ||
-                  _poly(ax, y, [(0.2, -0.7), (0.55, -0.98), (0.62, -0.45)])) &&
-              !(_ell(ax, y, 0.28, -0.2, 0.2, 0.2) &&
-                  !_ell(ax, y, 0.28, -0.2, 0.08, 0.08));
-
-        case 'Turtle':
-          return (_ell(x, y, 0, 0.1, 0.8, 0.65) && y < 0.3) ||
-              _ell(x, y, 0.78, 0.08, 0.2, 0.18) ||
-              _rect(x, y, -0.55, 0.25, -0.35, 0.65) ||
-              _rect(x, y, 0.3, 0.25, 0.5, 0.65) ||
-              _rect(x, y, -0.8, 0.2, 0.8, 0.32);
-
-        case 'Whale':
-          return _ell(x, y, -0.1, 0.15, 0.8, 0.5) ||
-              _poly(x, y, [
-                (0.55, 0.1),
-                (0.95, -0.4),
-                (0.98, 0.0),
-                (0.8, 0.25),
-              ]) ||
-              _seg(x, y, -0.55, -0.3, -0.55, -0.75, 0.04) ||
-              _ell(x, y, -0.55, -0.8, 0.15, 0.08);
-
-        case 'Dog':
-          return (_ell(x, y, -0.1, 0.1, 0.7, 0.35) ||
-                  _ell(x, y, 0.55, -0.3, 0.3, 0.27) ||
-                  _seg(x, y, 0.3, 0.0, 0.5, -0.25, 0.15) ||
-                  _rect(x, y, 0.7, -0.3, 0.98, -0.1) ||
-                  _ell(x, y, 0.38, -0.5, 0.1, 0.18) ||
-                  _rect(x, y, -0.6, 0.3, -0.46, 0.85) ||
-                  _rect(x, y, -0.3, 0.3, -0.16, 0.85) ||
-                  _rect(x, y, 0.15, 0.3, 0.29, 0.85) ||
-                  _rect(x, y, 0.4, 0.3, 0.54, 0.85) ||
-                  _seg(x, y, -0.75, 0.0, -0.97, -0.45, 0.06)) &&
-              !_ell(x, y, 0.62, -0.38, 0.04, 0.04);
-
-        case 'Lighthouse':
-          return _poly(x, y, [
-                (-0.4, -0.35),
-                (0.4, -0.35),
-                (0.6, 0.85),
-                (-0.6, 0.85),
-              ]) ||
-              _rect(x, y, -0.5, -0.55, 0.5, -0.32) ||
-              _poly(x, y, [(-0.6, -0.55), (0, -0.98), (0.6, -0.55)]) ||
-              _rect(x, y, -0.8, 0.85, 0.8, 0.98) ||
-              _seg(x, y, -0.5, -0.45, -0.98, -0.65, 0.05) ||
-              _seg(x, y, 0.5, -0.45, 0.98, -0.65, 0.05);
-
-        case 'Castle':
-          return (_rect(x, y, -0.8, -0.3, 0.8, 0.9) ||
-                  _rect(x, y, -0.95, -0.8, -0.5, 0.9) ||
-                  _rect(x, y, 0.5, -0.8, 0.95, 0.9) ||
-                  _poly(x, y, [(-1, -0.8), (-0.725, -1.0), (-0.45, -0.8)]) ||
-                  _poly(x, y, [(0.45, -0.8), (0.725, -1.0), (1, -0.8)])) &&
-              !(_rect(x, y, -0.15, 0.35, 0.15, 0.9) ||
-                  _ell(x, y, 0, 0.35, 0.15, 0.15));
-
-        // ------------------------- Detailed designs ----------------------
-        case 'Windmill':
-          {
-            if (_poly(x, y, [
-                  (-0.3, 0.92),
-                  (0.3, 0.92),
-                  (0.18, -0.2),
-                  (-0.18, -0.2),
-                ]) ||
-                _ell(x, y, 0, -0.3, 0.15, 0.15)) {
-              return true;
-            }
-
-            for (var i = 0; i < 4; i++) {
-              final a = math.pi / 4 + i * math.pi / 2;
-              if (_seg(
-                x,
-                y,
-                0,
-                -0.3,
-                math.cos(a) * 0.7,
-                -0.3 + math.sin(a) * 0.7,
-                0.09,
-              )) {
-                return true;
-              }
-            }
-            return false;
-          }
-
-        case 'Train':
-          return (_rect(x, y, -0.9, -0.35, 0.25, 0.45) ||
-                  _rect(x, y, -0.75, -0.7, -0.55, -0.35) ||
-                  _ell(x, y, -0.2, -0.35, 0.12, 0.12) ||
-                  _rect(x, y, 0.25, -0.65, 0.85, 0.45) ||
-                  _rect(x, y, 0.2, -0.75, 0.9, -0.65) ||
-                  _ell(x, y, -0.6, 0.55, 0.2, 0.2) ||
-                  _ell(x, y, -0.1, 0.55, 0.2, 0.2) ||
-                  _ell(x, y, 0.55, 0.55, 0.22, 0.22)) &&
-              !_rect(x, y, 0.45, -0.5, 0.7, -0.2);
-
-        case 'Bicycle':
-          return _ring(x - 0.55, y - 0.3, 0.35, 0.25) ||
-              _ring(x + 0.55, y - 0.3, 0.35, 0.25) ||
-              _seg(x, y, -0.55, -0.3, -0.1, 0.3, 0.055) ||
-              _seg(x, y, -0.1, 0.3, 0.55, -0.3, 0.055) ||
-              _seg(x, y, -0.55, -0.3, 0.55, -0.3, 0.055) ||
-              _seg(x, y, -0.1, 0.3, 0.0, 0.72, 0.055) ||
-              _seg(x, y, -0.12, 0.72, 0.15, 0.72, 0.055) ||
-              _seg(x, y, 0.45, -0.3, 0.55, -0.7, 0.055);
-
-        case 'Eagle':
-          return _poly(ax, y, [
-            (0, -0.6),
-            (0.12, -0.5),
-            (0.2, -0.15),
-            (0.98, -0.6),
-            (0.85, -0.1),
-            (0.98, 0.1),
-            (0.55, 0.12),
-            (0.4, 0.45),
-            (0.18, 0.3),
-            (0.12, 0.9),
-            (0, 0.95),
-          ]);
-
-        case 'Dragonfly':
-          return _ell(x, y, 0, 0.0, 0.1, 0.9) ||
-              _ell(x, y, 0, -0.85, 0.14, 0.12) ||
-              _ell(ax, y, 0.5, -0.4, 0.48, 0.14) ||
-              _ell(ax, y, 0.45, -0.05, 0.42, 0.13);
-
-        case 'Peacock':
-          return _peacock(x, y);
-
-        case 'Octopus':
-          return _octopus(x, y);
-
-        case 'Dinosaur':
-          return (_ell(x, y, -0.1, 0.1, 0.65, 0.45) ||
-                  _ell(x, y, 0.55, -0.35, 0.35, 0.28) ||
-                  _seg(x, y, 0.3, 0.0, 0.55, -0.35, 0.2) ||
-                  _rect(x, y, 0.6, -0.35, 0.95, -0.15) ||
-                  _poly(x, y, [(-0.6, -0.1), (-0.98, 0.3), (-0.55, 0.3)]) ||
-                  _rect(x, y, -0.3, 0.4, -0.1, 0.9) ||
-                  _rect(x, y, 0.1, 0.4, 0.3, 0.9) ||
-                  _seg(x, y, 0.45, 0.1, 0.6, 0.25, 0.05)) &&
-              !_ell(x, y, 0.62, -0.42, 0.05, 0.05);
-
+        // ------------------------- Expert: thin silhouettes --------------
         case 'Snowflake':
           return _snow(x, y);
 
-        case 'Mandala':
-          return _mandala(x, y);
+        case 'Spider':
+          return _ell(x, y, 0, 0.25, 0.32, 0.42) ||
+              _ell(x, y, 0, -0.22, 0.22, 0.2) ||
+              _seg(ax, y, 0.15, -0.28, 0.58, -0.8, 0.05) ||
+              _seg(ax, y, 0.58, -0.8, 0.92, -0.45, 0.05) ||
+              _seg(ax, y, 0.2, -0.12, 0.75, -0.35, 0.05) ||
+              _seg(ax, y, 0.75, -0.35, 0.98, 0.0, 0.05) ||
+              _seg(ax, y, 0.2, 0.05, 0.75, 0.2, 0.05) ||
+              _seg(ax, y, 0.75, 0.2, 0.95, 0.65, 0.05) ||
+              _seg(ax, y, 0.15, 0.3, 0.55, 0.65, 0.05) ||
+              _seg(ax, y, 0.55, 0.65, 0.7, 0.98, 0.05);
 
-        case 'Cog':
-          return _cog(x, y);
+        case 'Palm Tree':
+          return _seg(x, y, -0.15, 0.95, -0.05, 0.4, 0.09) ||
+              _seg(x, y, -0.05, 0.4, 0.05, -0.2, 0.08) ||
+              _seg(x, y, 0.05, -0.25, -0.9, -0.05, 0.07) ||
+              _seg(x, y, 0.05, -0.25, -0.65, -0.68, 0.07) ||
+              _seg(x, y, 0.05, -0.25, 0.05, -0.92, 0.07) ||
+              _seg(x, y, 0.05, -0.25, 0.75, -0.68, 0.07) ||
+              _seg(x, y, 0.05, -0.25, 0.95, -0.05, 0.07) ||
+              _ell(x, y, -0.05, -0.15, 0.1, 0.1) ||
+              _ell(x, y, 0.15, -0.12, 0.1, 0.1);
+
+        case 'Bridge':
+          return _rect(x, y, -0.98, 0.35, 0.98, 0.5) ||
+              _rect(x, y, -0.62, -0.6, -0.5, 0.5) ||
+              _rect(x, y, 0.5, -0.6, 0.62, 0.5) ||
+              _seg(ax, y, 0.98, 0.35, 0.56, -0.55, 0.04) ||
+              (ax <= 0.56 &&
+                  _ab(y - (0.05 - 0.6 * ax * ax / 0.3136)) <= 0.045) ||
+              _rect(x, y, -0.04, 0.04, 0.04, 0.35) ||
+              _rect(ax, y, 0.11, 0.0, 0.19, 0.35) ||
+              _rect(ax, y, 0.26, -0.13, 0.34, 0.35) ||
+              _rect(ax, y, 0.42, -0.35, 0.5, 0.35);
+
+        case 'Telescope':
+          return _seg(x, y, -0.75, 0.15, 0.45, -0.5, 0.16) ||
+              _seg(x, y, 0.45, -0.5, 0.8, -0.68, 0.09) ||
+              _seg(x, y, -0.1, -0.1, -0.45, 0.95, 0.06) ||
+              _seg(x, y, -0.1, -0.1, 0.0, 0.95, 0.06) ||
+              _seg(x, y, -0.1, -0.1, 0.35, 0.95, 0.06);
+
+        case 'Bicycle':
+          return _ring(x - 0.55, y - 0.3, 0.38, 0.27) ||
+              _ring(x + 0.55, y - 0.3, 0.38, 0.27) ||
+              _seg(x, y, -0.55, 0.3, -0.12, 0.3, 0.055) ||
+              _seg(x, y, -0.55, 0.3, -0.3, -0.25, 0.055) ||
+              _seg(x, y, -0.12, 0.3, -0.3, -0.25, 0.055) ||
+              _seg(x, y, -0.3, -0.25, 0.35, -0.2, 0.055) ||
+              _seg(x, y, -0.12, 0.3, 0.35, -0.2, 0.055) ||
+              _seg(x, y, 0.35, -0.2, 0.55, 0.3, 0.055) ||
+              _seg(x, y, 0.35, -0.2, 0.3, -0.45, 0.055) ||
+              _seg(x, y, 0.3, -0.45, 0.48, -0.5, 0.055) ||
+              _seg(x, y, -0.45, -0.3, -0.15, -0.3, 0.06);
+
+        case 'Windmill':
+          return (_poly(x, y, [
+                    (-0.3, 0.95),
+                    (0.3, 0.95),
+                    (0.17, -0.2),
+                    (-0.17, -0.2),
+                  ]) ||
+                  _ell(x, y, 0, -0.3, 0.14, 0.14) ||
+                  _rays(x, y + 0.3, 4, 0.0, 0.82, 0.1, rot: math.pi / 4)) &&
+              !_rrect(x, y, -0.08, 0.6, 0.08, 0.95, 0.04);
+
+        case 'Dragonfly':
+          return _ell(x, y, 0, 0.0, 0.11, 0.92) ||
+              _ell(x, y, 0, -0.88, 0.15, 0.13) ||
+              _ell(ax, y, 0.52, -0.45, 0.46, 0.13) ||
+              _ell(ax, y, 0.46, -0.12, 0.4, 0.12);
+
+        case 'Key':
+          return _ring(x + 0.55, y, 0.4, 0.2) ||
+              _rect(x, y, -0.18, -0.09, 0.95, 0.09) ||
+              _rect(x, y, 0.62, 0.09, 0.76, 0.38) ||
+              _rect(x, y, 0.8, 0.09, 0.94, 0.3);
+
+        case 'Eiffel Tower':
+          return (_poly(ax, y, [
+                    (0, -0.98),
+                    (0.07, -0.6),
+                    (0.18, -0.15),
+                    (0.4, 0.45),
+                    (0.8, 0.95),
+                    (0.5, 0.95),
+                    (0.32, 0.65),
+                    (0, 0.65),
+                  ]) ||
+                  _rect(x, y, -0.3, -0.15, 0.3, -0.05) ||
+                  _rect(x, y, -0.5, 0.4, 0.5, 0.52)) &&
+              !_ell(x, y, 0, 0.95, 0.28, 0.3);
+
+        // ------------------------- Expert: thin parts with more body -----
+        case 'Compass':
+          return _ring(x, y, 0.95, 0.8) ||
+              _poly(x, y, [(0, -0.88), (0.16, 0), (0, 0.88), (-0.16, 0)]) ||
+              _poly(x, y, [(-0.88, 0), (0, 0.16), (0.88, 0), (0, -0.16)]);
+
+        case 'Crab':
+          return (_ell(x, y, 0, 0.15, 0.58, 0.4) ||
+                  _seg(ax, y, 0.45, 0.0, 0.75, -0.4, 0.07) ||
+                  _ell(ax, y, 0.8, -0.55, 0.2, 0.22) ||
+                  _seg(ax, y, 0.45, 0.25, 0.9, 0.5, 0.05) ||
+                  _seg(ax, y, 0.4, 0.38, 0.8, 0.75, 0.05) ||
+                  _seg(ax, y, 0.25, 0.5, 0.5, 0.95, 0.05) ||
+                  _seg(ax, y, 0.2, -0.2, 0.25, -0.55, 0.05) ||
+                  _ell(ax, y, 0.25, -0.6, 0.07, 0.07)) &&
+              !_poly(ax, y, [(0.8, -0.55), (0.72, -0.9), (0.9, -0.9)]);
+
+        case 'Maze':
+          return (_rect(x, y, -0.95, -0.95, 0.95, 0.95) &&
+                  !_rect(x, y, -0.8, -0.8, 0.8, 0.8)) ||
+              _rect(x, y, -0.8, -0.45, 0.3, -0.28) ||
+              _rect(x, y, 0.3, -0.45, 0.47, 0.5) ||
+              _rect(x, y, -0.5, 0.15, 0.47, 0.32) ||
+              _rect(x, y, -0.5, 0.15, -0.33, 0.8);
+
+        case 'Bolt':
+          return _poly(x, y, [
+            (0.25, -0.98),
+            (-0.62, 0.12),
+            (-0.08, 0.12),
+            (-0.28, 0.98),
+            (0.65, -0.18),
+            (0.1, -0.18),
+          ]);
+
+        case 'Tulip':
+          return _poly(x, y, [
+                (-0.52, -0.2),
+                (-0.52, -0.82),
+                (-0.2, -0.5),
+                (0, -0.92),
+                (0.2, -0.5),
+                (0.52, -0.82),
+                (0.52, -0.2),
+                (0, 0.2),
+              ]) ||
+              _rect(x, y, -0.07, 0.1, 0.07, 0.95) ||
+              _ell(x, y, -0.28, 0.6, 0.25, 0.11) ||
+              _ell(x, y, 0.28, 0.45, 0.25, 0.11);
+
+        case 'Rose':
+          return (_ell(x, y, 0, -0.5, 0.45, 0.42) ||
+                  _ell(ax, y, 0.38, -0.4, 0.25, 0.3) ||
+                  _rect(x, y, -0.06, -0.2, 0.06, 0.95) ||
+                  _ell(x, y, -0.28, 0.35, 0.26, 0.11) ||
+                  _ell(x, y, 0.28, 0.6, 0.26, 0.11)) &&
+              !_ring(x, y + 0.5, 0.26, 0.17);
+
+        case 'Eagle':
+          return _poly(ax, y, [
+            (0, -0.7),
+            (0.1, -0.62),
+            (0.16, -0.3),
+            (0.98, -0.65),
+            (0.92, -0.2),
+            (0.98, 0.05),
+            (0.6, 0.08),
+            (0.45, 0.4),
+            (0.2, 0.25),
+            (0.14, 0.9),
+            (0, 0.95),
+          ]);
+
+        case 'Satellite':
+          return (_rrect(x, y, -0.22, -0.22, 0.22, 0.22, 0.04) ||
+                  _rect(x, y, -0.98, -0.32, -0.42, 0.32) ||
+                  _rect(x, y, 0.42, -0.32, 0.98, 0.32) ||
+                  _rect(ax, y, 0.22, -0.05, 0.42, 0.05) ||
+                  _seg(x, y, 0, -0.2, 0, -0.62, 0.04) ||
+                  _ell(x, y, 0, -0.72, 0.16, 0.11)) &&
+              !_rect(ax, y, 0.68, -0.3, 0.72, 0.3);
+
+        case 'Spiral':
+          return r <= 0.95 &&
+              (r < 0.15 || _frac(r * 3.5 - angle / (2 * math.pi)) < 0.55);
+
+        case 'Galaxy':
+          return r <= 0.95 &&
+              (r < 0.18 || math.cos(2 * (angle - r * 3.5)) > 0.35);
+
+        // ------------------------- Expert: fuller silhouettes ------------
+        case 'Cactus':
+          return _rrect(x, y, -0.24, -0.85, 0.24, 0.82, 0.24) ||
+              _rrect(x, y, -0.7, -0.35, -0.2, -0.12, 0.1) ||
+              _rrect(x, y, -0.7, -0.68, -0.48, -0.12, 0.1) ||
+              _rrect(x, y, 0.2, 0.05, 0.7, 0.28, 0.1) ||
+              _rrect(x, y, 0.48, -0.32, 0.7, 0.28, 0.1) ||
+              _poly(x, y, [
+                (-0.5, 0.78),
+                (0.5, 0.78),
+                (0.4, 0.98),
+                (-0.4, 0.98),
+              ]);
 
         case 'Sun':
-          return _sun(x, y);
+          return r <= 0.45 || _rays(x, y, 12, 0.4, 0.95, 0.07);
 
         case 'Planet':
           return _planet(x, y);
 
-        case 'Spiral':
-          {
-            if (r > 0.95) return false;
-
-            final p = r * 4.0 - angle / (2 * math.pi);
-            final frac = p - p.floorToDouble();
-
-            return r < 0.15 || frac < 0.5;
-          }
+        case 'Dinosaur':
+          return (_ell(x, y, -0.1, 0.15, 0.62, 0.42) ||
+                  _seg(x, y, 0.35, 0.0, 0.6, -0.4, 0.17) ||
+                  _ell(x, y, 0.68, -0.5, 0.27, 0.2) ||
+                  _poly(x, y, [(-0.62, 0.0), (-1.0, 0.45), (-0.5, 0.38)]) ||
+                  _rrect(x, y, -0.42, 0.45, -0.16, 0.92, 0.06) ||
+                  _rrect(x, y, 0.05, 0.45, 0.31, 0.92, 0.06) ||
+                  _poly(x, y, [(-0.5, -0.18), (-0.38, -0.5), (-0.24, -0.22)]) ||
+                  _poly(x, y, [(-0.2, -0.22), (-0.08, -0.52), (0.06, -0.2)])) &&
+              !_ell(x, y, 0.75, -0.55, 0.05, 0.05);
 
         case 'Infinity':
-          return _ring(x - 0.45, y, 0.5, 0.25) || _ring(x + 0.45, y, 0.5, 0.25);
+          return _ring(x - 0.45, y, 0.52, 0.26) ||
+              _ring(x + 0.45, y, 0.52, 0.26);
 
-        case 'Paw Print':
-          return _ell(ax, y, 0.62, -0.1, 0.18, 0.26) ||
-              _ell(ax, y, 0.24, -0.58, 0.2, 0.26) ||
-              _ell(x, y, 0, 0.42, 0.5, 0.4) ||
-              _ell(ax, y, 0.42, 0.35, 0.25, 0.3);
-
-        case 'Temple':
-          return _temple(x, y);
-
-        case 'Bridge':
-          return _bridge(x, y);
-
-        case 'Telescope':
-          return _seg(x, y, -0.8, 0.1, 0.55, -0.55, 0.14) ||
-              _seg(x, y, 0.55, -0.55, 0.85, -0.7, 0.07) ||
-              _seg(x, y, -0.12, -0.22, -0.45, 0.92, 0.055) ||
-              _seg(x, y, -0.12, -0.22, 0.25, 0.92, 0.055) ||
-              _seg(x, y, -0.12, -0.22, -0.1, 0.92, 0.055);
-
-        case 'Maze':
-          return _maze(x, y);
-
-        // ------------------------- Expert designs ------------------------
-        case 'Rose':
-          return (_ell(x, y, 0, -0.5, 0.42, 0.42) &&
-                  !_ell(x, y, 0, -0.6, 0.1, 0.2)) ||
-              _ell(ax, y, 0.35, -0.4, 0.25, 0.3) ||
-              _rect(x, y, -0.05, -0.2, 0.05, 0.95) ||
-              _ell(x, y, -0.28, 0.35, 0.26, 0.11) ||
-              _ell(x, y, 0.28, 0.6, 0.26, 0.11);
-
-        case 'Tulip':
+        case 'Chevron':
           return _poly(x, y, [
-                (-0.5, -0.2),
-                (-0.5, -0.8),
-                (-0.2, -0.5),
-                (0, -0.9),
-                (0.2, -0.5),
-                (0.5, -0.8),
-                (0.5, -0.2),
-                (0, 0.2),
+            (-0.9, -0.85),
+            (-0.3, -0.85),
+            (0.9, 0),
+            (-0.3, 0.85),
+            (-0.9, 0.85),
+            (0.3, 0),
+          ]);
+
+        case 'Crystal':
+          return _poly(x, y, [
+                (-0.22, 0.95),
+                (-0.3, -0.2),
+                (0, -0.98),
+                (0.3, -0.2),
+                (0.22, 0.95),
               ]) ||
-              _rect(x, y, -0.05, 0.1, 0.05, 0.95) ||
-              _ell(x, y, -0.28, 0.6, 0.24, 0.1) ||
-              _ell(x, y, 0.28, 0.45, 0.24, 0.1);
-
-        case 'Fox':
-          return _poly(x, y, [
-                (-0.95, -0.85),
-                (-0.45, -0.35),
-                (0.45, -0.35),
-                (0.95, -0.85),
-                (0.8, 0.2),
-                (0, 0.95),
-                (-0.8, 0.2),
-              ]) &&
-              !_ell(ax, y, 0.35, -0.05, 0.08, 0.06);
-
-        case 'Crab':
-          return _ell(x, y, 0, 0.1, 0.55, 0.4) ||
-              _ell(ax, y, 0.8, -0.45, 0.17, 0.2) ||
-              _seg(ax, y, 0.45, -0.05, 0.75, -0.35, 0.06) ||
-              _seg(ax, y, 0.5, 0.15, 0.9, 0.4, 0.05) ||
-              _seg(ax, y, 0.4, 0.3, 0.8, 0.65, 0.05) ||
-              _seg(ax, y, 0.25, 0.45, 0.5, 0.9, 0.05) ||
-              _seg(ax, y, 0.2, -0.25, 0.25, -0.55, 0.04) ||
-              _ell(ax, y, 0.25, -0.6, 0.06, 0.06);
-
-        case 'Spider':
-          return _ell(x, y, 0, 0.2, 0.3, 0.4) ||
-              _ell(x, y, 0, -0.25, 0.2, 0.18) ||
-              _seg(ax, y, 0.15, -0.3, 0.55, -0.75, 0.04) ||
-              _seg(ax, y, 0.55, -0.75, 0.9, -0.2, 0.04) ||
-              _seg(ax, y, 0.2, -0.15, 0.7, -0.2, 0.04) ||
-              _seg(ax, y, 0.7, -0.2, 0.95, 0.2, 0.04) ||
-              _seg(ax, y, 0.2, 0.0, 0.7, 0.2, 0.04) ||
-              _seg(ax, y, 0.7, 0.2, 0.9, 0.7, 0.04) ||
-              _seg(ax, y, 0.15, 0.3, 0.5, 0.6, 0.04) ||
-              _seg(ax, y, 0.5, 0.6, 0.6, 0.95, 0.04);
-
-        case 'Palm Tree':
-          return _seg(x, y, -0.1, 0.95, 0.05, -0.2, 0.07) ||
-              _seg(x, y, 0.05, -0.25, -0.85, -0.1, 0.07) ||
-              _seg(x, y, 0.05, -0.25, -0.6, -0.6, 0.07) ||
-              _seg(x, y, 0.05, -0.25, 0.05, -0.85, 0.07) ||
-              _seg(x, y, 0.05, -0.25, 0.7, -0.6, 0.07) ||
-              _seg(x, y, 0.05, -0.25, 0.9, -0.1, 0.07) ||
-              _ell(x, y, -0.05, -0.15, 0.1, 0.1) ||
-              _ell(x, y, 0.15, -0.12, 0.1, 0.1);
-
-        case 'Skull':
-          return (_ell(x, y, 0, -0.2, 0.75, 0.7) ||
-                  _rect(x, y, -0.4, 0.3, 0.4, 0.85)) &&
-              !_ell(ax, y, 0.3, -0.2, 0.17, 0.2) &&
-              !_poly(x, y, [(0, 0.0), (-0.08, 0.15), (0.08, 0.15)]) &&
-              !(y > 0.55 &&
-                  y < 0.85 &&
-                  ((x / 0.2) - (x / 0.2).roundToDouble()).abs() * 0.2 < 0.02);
-
-        case 'Compass':
-          return _ring(x, y, 0.95, 0.82) ||
-              _poly(x, y, [(0, -0.88), (0.14, 0), (0, 0.88), (-0.14, 0)]) ||
-              _poly(x, y, [(-0.88, 0), (0, 0.14), (0.88, 0), (0, -0.14)]);
-
-        case 'Pagoda':
-          return _pagoda(x, y);
-
-        case 'Eiffel Tower':
-          return _tower(x, y);
+              _poly(ax, y, [
+                (0.2, 0.95),
+                (0.34, 0.05),
+                (0.62, -0.45),
+                (0.9, 0.05),
+                (0.95, 0.95),
+              ]);
 
         case 'Balloon':
-          return _ell(x, y, 0, -0.4, 0.65, 0.58) ||
+          return _ell(x, y, 0, -0.4, 0.66, 0.58) ||
               _poly(x, y, [
                 (-0.6, -0.2),
                 (0.6, -0.2),
                 (0.2, 0.3),
                 (-0.2, 0.3),
               ]) ||
-              _seg(x, y, -0.2, 0.3, -0.2, 0.55, 0.03) ||
-              _seg(x, y, 0.2, 0.3, 0.2, 0.55, 0.03) ||
-              _rect(x, y, -0.28, 0.55, 0.28, 0.88);
+              _seg(x, y, -0.2, 0.3, -0.2, 0.55, 0.035) ||
+              _seg(x, y, 0.2, 0.3, 0.2, 0.55, 0.035) ||
+              _rrect(x, y, -0.28, 0.55, 0.28, 0.88, 0.05);
 
-        case 'Satellite':
-          return _rect(x, y, -0.2, -0.2, 0.2, 0.2) ||
-              _rect(x, y, -0.95, -0.3, -0.4, 0.3) ||
-              _rect(x, y, 0.4, -0.3, 0.95, 0.3) ||
-              _rect(x, y, -0.4, -0.04, -0.2, 0.04) ||
-              _rect(x, y, 0.2, -0.04, 0.4, 0.04) ||
-              _seg(x, y, 0, -0.2, 0, -0.6, 0.03) ||
-              _ell(x, y, 0, -0.7, 0.15, 0.1);
+        case 'Peacock':
+          return ((_ell(x, y, 0, 0.3, 0.95, 0.95) && y < 0.3) ||
+                  _ell(x, y, 0, 0.62, 0.22, 0.36)) &&
+              !_ell(x, y, 0, -0.3, 0.08, 0.1) &&
+              !_ell(ax, y, 0.3, -0.22, 0.08, 0.1) &&
+              !_ell(ax, y, 0.52, 0.0, 0.08, 0.1);
+
+        case 'Octopus':
+          return _octopus(x, y);
+
+        // ------------------------- Expert: the fullest silhouettes -------
+        case 'Mandala':
+          return _petals(x, y, 8, 0.6, 0.22) ||
+              _ell(x, y, 0, 0, 0.25, 0.25) ||
+              _ring(x, y, 0.95, 0.84) ||
+              _rays(x, y, 8, 0.0, 0.9, 0.045, rot: math.pi / 8);
+
+        case 'Ring':
+          return _ring(x, y, 0.92, 0.5);
+
+        case 'Paw Print':
+          return _ell(ax, y, 0.65, -0.1, 0.18, 0.26) ||
+              _ell(ax, y, 0.26, -0.58, 0.2, 0.26) ||
+              _ell(x, y, 0, 0.42, 0.5, 0.4) ||
+              _ell(ax, y, 0.42, 0.35, 0.25, 0.3);
+
+        case 'Fox':
+          return (_poly(x, y, [
+                    (-0.8, -0.25),
+                    (0.8, -0.25),
+                    (0.92, 0.1),
+                    (0, 0.95),
+                    (-0.92, 0.1),
+                  ]) ||
+                  _poly(ax, y, [(0.95, -0.95), (0.3, -0.3), (0.9, 0.0)])) &&
+              !_ell(ax, y, 0.35, -0.02, 0.09, 0.06);
 
         case 'Starburst':
-          return _star(x, y, points: 12);
+          return _starPoly(x, y, 12, 0.98, 0.58);
 
-        case 'Crystal':
-          return _poly(x, y, [
-                (-0.2, 0.95),
-                (-0.28, -0.2),
-                (0, -0.98),
-                (0.28, -0.2),
-                (0.2, 0.95),
+        case 'Pagoda':
+          return _poly(ax, y, [
+                (0, -0.7),
+                (0.25, -0.7),
+                (0.5, -0.52),
+                (0, -0.52),
               ]) ||
+              _rect(x, y, -0.25, -0.52, 0.25, -0.27) ||
               _poly(ax, y, [
-                (0.15, 0.95),
-                (0.3, 0.0),
-                (0.55, -0.4),
-                (0.8, 0.0),
-                (0.85, 0.95),
-              ]);
+                (0, -0.25),
+                (0.45, -0.25),
+                (0.7, -0.07),
+                (0, -0.07),
+              ]) ||
+              _rect(x, y, -0.45, -0.07, 0.45, 0.18) ||
+              _poly(ax, y, [(0, 0.2), (0.65, 0.2), (0.9, 0.38), (0, 0.38)]) ||
+              _rect(x, y, -0.65, 0.38, 0.65, 0.63) ||
+              _rect(x, y, -0.92, 0.63, 0.92, 0.82) ||
+              _seg(x, y, 0, -0.98, 0, -0.7, 0.045);
 
-        case 'Galaxy':
-          return r <= 0.95 &&
-              (r < 0.2 || math.cos(2 * (angle - r * 3.5)) > 0.4);
+        case 'Cog':
+          return _cogShape(x, y);
+
+        case 'Skull':
+          return (_ell(x, y, 0, -0.15, 0.78, 0.72) ||
+                  _rrect(x, y, -0.42, 0.3, 0.42, 0.92, 0.08)) &&
+              !_ell(ax, y, 0.3, -0.15, 0.18, 0.2) &&
+              !_poly(x, y, [(0, 0.05), (-0.09, 0.2), (0.09, 0.2)]) &&
+              !(y > 0.62 && (_ab(x) < 0.03 || _ab(ax - 0.2) < 0.03));
+
+        case 'Temple':
+          return _poly(x, y, [(-0.98, -0.4), (0, -0.92), (0.98, -0.4)]) ||
+              _rect(x, y, -0.98, -0.4, 0.98, -0.25) ||
+              _rect(x, y, -0.79, -0.25, -0.65, 0.65) ||
+              _rect(x, y, -0.43, -0.25, -0.29, 0.65) ||
+              _rect(x, y, -0.07, -0.25, 0.07, 0.65) ||
+              _rect(x, y, 0.29, -0.25, 0.43, 0.65) ||
+              _rect(x, y, 0.65, -0.25, 0.79, 0.65) ||
+              _rect(x, y, -0.98, 0.65, 0.98, 0.78) ||
+              _rect(x, y, -0.88, 0.78, 0.88, 0.92);
+
+        case 'Train':
+          return (_rrect(x, y, -0.9, -0.3, 0.2, 0.45, 0.1) ||
+                  _rect(x, y, -0.8, -0.7, -0.55, -0.3) ||
+                  _rect(x, y, -0.88, -0.78, -0.47, -0.68) ||
+                  _ell(x, y, -0.1, -0.32, 0.12, 0.12) ||
+                  _rect(x, y, 0.2, -0.65, 0.88, 0.45) ||
+                  _rect(x, y, 0.15, -0.78, 0.93, -0.65) ||
+                  _poly(x, y, [(-0.9, 0.45), (-1.0, 0.72), (-0.8, 0.72)]) ||
+                  _ell(x, y, -0.6, 0.55, 0.22, 0.22) ||
+                  _ell(x, y, -0.15, 0.55, 0.22, 0.22) ||
+                  _ell(x, y, 0.55, 0.55, 0.25, 0.25)) &&
+              !_rect(x, y, 0.42, -0.5, 0.7, -0.2);
 
         default:
           return r < 0.8;
