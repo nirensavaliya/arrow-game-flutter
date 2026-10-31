@@ -936,7 +936,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 },
                 child: Container(
                   height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   decoration: BoxDecoration(
                     color: _glass,
                     borderRadius: BorderRadius.circular(22),
@@ -978,8 +978,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           fontFeatures: const [ui.FontFeature.tabularFigures()],
                         ),
                       ),
-                      const SizedBox(width: 3),
-                      Icon(Icons.add, size: 16),
+
                     ],
                   ),
                 ),

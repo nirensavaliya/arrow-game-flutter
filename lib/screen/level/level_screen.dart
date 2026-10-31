@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
@@ -119,7 +118,6 @@ class _LevelScreenState extends State<LevelScreen>
 
   late final AnimationController _intro;
   late final Animation<double> _headerFade;
-  late final Animation<Offset> _headerSlide;
 
   // ───────────────────────── Lifecycle ─────────────────────────
 
@@ -142,11 +140,6 @@ class _LevelScreenState extends State<LevelScreen>
     _headerFade = Tween<double>(
       begin: 0,
       end: 1,
-    ).animate(curve);
-
-    _headerSlide = Tween<Offset>(
-      begin: const Offset(0, 0.035),
-      end: Offset.zero,
     ).animate(curve);
 
     _intro.forward();

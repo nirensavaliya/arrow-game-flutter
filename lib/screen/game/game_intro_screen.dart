@@ -405,7 +405,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
       },
       child: Container(
         height: 38,
-        padding: const EdgeInsets.only(left: 7, right: 5),
+        padding: const EdgeInsets.only(left: 7, right: 7),
         decoration: BoxDecoration(
           color: _isDark
               ? Colors.white.withValues(alpha: 0.07)
@@ -456,9 +456,6 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                 letterSpacing: 0.2,
               ),
             ),
-
-            // Add coins button
-            const Icon(Icons.add_rounded, color: Colors.white, size: 20),
           ],
         ),
       ),
