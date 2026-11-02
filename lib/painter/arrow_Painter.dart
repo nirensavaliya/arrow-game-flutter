@@ -99,8 +99,8 @@ class ArrowPainter extends CustomPainter {
 
         shift =
             arrow.bumpTravel *
-                progress *
-                (horizontal ? size.width : size.height);
+            progress *
+            (horizontal ? size.width : size.height);
       }
 
       if (shift > 0) {
@@ -190,16 +190,16 @@ class ArrowPainter extends CustomPainter {
 
   // ARROW DRAWING
   void _drawArrow(
-      Canvas canvas,
-      List<Offset> points, {
-        required Color color,
-        required double strokeWidth,
-        required double headLength,
-        required double headHalfWidth,
-        required double cornerRadius,
-        double headProgress = 1.0,
-        bool glow = false,
-      }) {
+    Canvas canvas,
+    List<Offset> points, {
+    required Color color,
+    required double strokeWidth,
+    required double headLength,
+    required double headHalfWidth,
+    required double cornerRadius,
+    double headProgress = 1.0,
+    bool glow = false,
+  }) {
     if (points.length < 2) return;
 
     final direction = _headDirection(points);
@@ -258,11 +258,11 @@ class ArrowPainter extends CustomPainter {
   }
 
   Path _createArrowHead(
-      Offset tip,
-      Offset direction,
-      double headLength,
-      double headHalfWidth,
-      ) {
+    Offset tip,
+    Offset direction,
+    double headLength,
+    double headHalfWidth,
+  ) {
     final perpendicular = Offset(-direction.dy, direction.dx);
     final base = tip - direction * headLength;
 

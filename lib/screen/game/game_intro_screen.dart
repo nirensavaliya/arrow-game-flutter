@@ -9,6 +9,7 @@ import '../../modes/game_mode_config.dart';
 import '../../services/game_storage.dart';
 import '../../services/settings_storage.dart';
 import '../../services/vibration_service.dart';
+import '../level/level_design.dart';
 import '../level/level_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -21,79 +22,88 @@ class GameIntroScreen extends StatefulWidget {
 
 class _GameIntroScreenState extends State<GameIntroScreen>
     with TickerProviderStateMixin {
-  // Dark theme palette
-  static const Color _darkBg = Color(0xFF0A0B14);
-  static const Color _darkSurface = Color(0xFF14162A);
-  static const Color _darkTextPrimary = Color(0xFFF5F5FF);
-  static const Color _darkTextSecondary = Color(0xFF9B9DB8);
+  static const Color _darkBg = Color(0xFF07080F);
+  static const Color _darkSurface = Color(0xFF12141F);
+  static const Color _darkTextPrimary = Color(0xFFF7F7FC);
+  static const Color _darkTextSecondary = Color(0xFF8E92AB);
 
-  // Light theme palette
-  static const Color _lightBg = Color(0xFFF6F7FC);
+  static const Color _lightBg = Color(0xFFF4F5FA);
   static const Color _lightSurface = Color(0xFFFFFFFF);
-  static const Color _lightTextPrimary = Color(0xFF17182B);
-  static const Color _lightTextSecondary = Color(0xFF6F7289);
+  static const Color _lightTextPrimary = Color(0xFF14162A);
+  static const Color _lightTextSecondary = Color(0xFF6F7390);
+
+  static const Color _gold = Color(0xFFFFC857);
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
 
   Color get _bg => _isDark ? _darkBg : _lightBg;
-
   Color get _surface => _isDark ? _darkSurface : _lightSurface;
-
   Color get _textPrimary => _isDark ? _darkTextPrimary : _lightTextPrimary;
-
   Color get _textSecondary =>
       _isDark ? _darkTextSecondary : _lightTextSecondary;
+  Color get _hairline => _isDark
+      ? Colors.white.withValues(alpha: 0.08)
+      : Colors.black.withValues(alpha: 0.07);
 
-  // Total coins from all modes
   int _coinCount = GameStorage.totalCoins();
-
-  // 0 = Normal, 1 = Timed Challenge, 2 = Speed Run
   int _selectedMode = 0;
 
   late final AnimationController _intro;
   late final AnimationController _ambient;
   late final PageController _pageController;
 
-
-
   final List<_GameMode> _modes = [
     _GameMode(
       title: 'Normal Mode',
-      tagline: 'RELAXED',
-      subtitle: 'Solve at your own pace. No clock, just you and the maze.',
+      tagline: 'PLAY YOUR WAY',
+      subtitle: 'Take your time, read the maze and find the perfect path.',
       detail: '${GameModeConfig.forMode(GameMode.normal).startingLives} lives',
       detailIcon: Icons.favorite_rounded,
-      icon: Icons.self_improvement_rounded,
-      color: const Color(0xFF7B72FF),
-      colorDeep: const Color(0xFF4B3FE0),
-      features: const ['No timer', 'Lives system', 'Calm pace'],
+      icon: Icons.explore_rounded,
+      color: const Color(0xFF8175FF),
+      colorDeep: const Color(0xFF4B3FD1),
+      features: const [
+        'No timer',
+        'Lives system',
+        'Relaxed pace',
+      ],
       cta: 'Start playing',
       ctaIcon: Icons.play_arrow_rounded,
     ),
     _GameMode(
       title: 'Timed Challenge',
-      tagline: 'INTENSE',
-      subtitle: 'Every level has a deadline. Think fast, move faster.',
-      detail: 'Time limit',
+      tagline: 'RACE THE CLOCK',
+      subtitle:
+      'Every level is a race against time. Plan quickly and stay sharp.',
+      detail: 'Time limit per level',
       detailIcon: Icons.hourglass_bottom_rounded,
       icon: Icons.timer_rounded,
-      color: const Color(0xFFFFB347),
-      colorDeep: const Color(0xFFE0701A),
-      features: const ['Level countdown', 'High pressure', 'Beat the clock'],
+      color: const Color(0xFFFFB34F),
+      colorDeep: const Color(0xFFD9681C),
+      features: const [
+        'Countdown',
+        'Quick decisions',
+        'Beat the clock',
+      ],
       cta: 'Start challenge',
       ctaIcon: Icons.timer_rounded,
     ),
     _GameMode(
       title: 'Speed Run',
-      tagline: 'EXTREME',
-      subtitle: 'Clear as many puzzles as you can before time runs out.',
+      tagline: 'GO ALL IN',
+      subtitle:
+      'Clear as many puzzles as possible before your session ends.',
       detail:
-          '${GameModeConfig.forMode(GameMode.speedRun).sessionDurationSeconds} seconds',
-      detailIcon: Icons.speed_rounded,
+      '${GameModeConfig.forMode(GameMode.speedRun).sessionDurationSeconds} seconds',
+      detailIcon: Icons.bolt_rounded,
       icon: Icons.bolt_rounded,
-      color: const Color(0xFF2ED573),
-      colorDeep: const Color(0xFF0E8A3E),
-      features: const ['One session', 'Endless puzzles', 'Chase your best'],
+      color: const Color(0xFF35D68A),
+      colorDeep: const Color(0xFF0C7F52),
+      features: const [
+        'One session',
+        'Endless puzzles',
+        'Beat your record',
+      ],
       cta: 'Start speed run',
       ctaIcon: Icons.bolt_rounded,
     ),
@@ -107,17 +117,17 @@ class _GameIntroScreenState extends State<GameIntroScreen>
 
     _pageController = PageController(
       initialPage: _selectedMode,
-      viewportFraction: 0.82,
+      viewportFraction: 0.86,
     );
 
     _intro = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 850),
     )..forward();
 
     _ambient = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 6),
+      duration: const Duration(seconds: 7),
     )..repeat(reverse: true);
   }
 
@@ -129,7 +139,6 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     super.dispose();
   }
 
-  // Load the saved default game mode.
   void _loadDefaultMode() {
     final savedMode = SettingsStorage.getDefaultGameMode();
 
@@ -145,8 +154,8 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     }
   }
 
-  GameMode get _selectedGameMode {
-    switch (_selectedMode) {
+  GameMode _gameModeAt(int index) {
+    switch (index) {
       case 1:
         return GameMode.timedChallenge;
       case 2:
@@ -154,6 +163,33 @@ class _GameIntroScreenState extends State<GameIntroScreen>
       default:
         return GameMode.normal;
     }
+  }
+
+  GameMode get _selectedGameMode => _gameModeAt(_selectedMode);
+
+  // --------------------------------------------------
+  // LEVEL PROGRESS (per mode)
+  // --------------------------------------------------
+  //
+  // Reads each mode's own saved progress from GameStorage.
+  // The UI refreshes automatically when you return from a game.
+  _ModeProgress _progressFor(GameMode mode) {
+    final int totalLevels = LevelDesigns.totalLevels;
+
+    final saved = GameStorage.loadProgress(mode.name);
+    final int cleared =
+    ((saved?['levelsCompleted'] as num?)?.toInt() ?? 0)
+        .clamp(0, totalLevels)
+        .toInt();
+
+    final int current =
+    GameStorage.unlockedLevel(mode.name).clamp(1, totalLevels).toInt();
+
+    return _ModeProgress(
+      currentLevel: current,
+      clearedLevels: cleared,
+      totalLevels: totalLevels,
+    );
   }
 
   Future<void> _startGame() async {
@@ -168,29 +204,48 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     controller.startMode(mode);
 
     await Get.to(
-      () => const LevelScreen(),
+          () => const LevelScreen(),
       arguments: {'mode': mode.name},
       transition: Transition.rightToLeft,
       duration: const Duration(milliseconds: 350),
     );
 
     if (!mounted) return;
-    setState(() => _coinCount = GameStorage.totalCoins());
+
+    setState(() {
+      _coinCount = GameStorage.totalCoins();
+    });
   }
 
+  // Tap on a side card: scroll to it (selection follows the page change).
   void _selectMode(int index) {
+    if (index == _selectedMode) return;
+
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      VibrationService.tap();
+      setState(() {
+        _selectedMode = index;
+      });
+    }
+  }
+
+  // Swipe settled on a new card.
+  void _onPageChanged(int index) {
     if (index == _selectedMode) return;
 
     VibrationService.tap();
 
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 380),
-      curve: Curves.easeOutCubic,
-    );
+    setState(() {
+      _selectedMode = index;
+    });
   }
 
-  // Reload the saved default when returning from Settings.
   Future<void> _openSettings() async {
     VibrationService.tap();
 
@@ -201,6 +256,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     final savedMode = SettingsStorage.getDefaultGameMode();
 
     final int newIndex;
+
     switch (savedMode) {
       case 'Timed Challenge':
         newIndex = 1;
@@ -212,24 +268,23 @@ class _GameIntroScreenState extends State<GameIntroScreen>
         newIndex = 0;
     }
 
-    if (newIndex == _selectedMode) return;
+    if (newIndex != _selectedMode) {
+      setState(() {
+        _selectedMode = newIndex;
+      });
 
-    setState(() {
-      _selectedMode = newIndex;
-    });
-
-    if (_pageController.hasClients) {
-      _pageController.jumpToPage(newIndex);
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(newIndex);
+      }
     }
   }
 
-  // Staggered reveal driven by one controller.
   Widget _reveal(double start, Widget child) {
     final animation = CurvedAnimation(
       parent: _intro,
       curve: Interval(
         start,
-        math.min(1.0, start + 0.5),
+        math.min(1.0, start + 0.55),
         curve: Curves.easeOutCubic,
       ),
     );
@@ -239,7 +294,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
       builder: (context, _) => Opacity(
         opacity: animation.value,
         child: Transform.translate(
-          offset: Offset(0, 22 * (1 - animation.value)),
+          offset: Offset(0, 18 * (1 - animation.value)),
           child: child,
         ),
       ),
@@ -249,55 +304,38 @@ class _GameIntroScreenState extends State<GameIntroScreen>
   @override
   Widget build(BuildContext context) {
     final mode = _modes[_selectedMode];
-    final height = MediaQuery.of(context).size.height;
-    final pagerHeight = (height * 0.46).clamp(330.0, 430.0).toDouble();
 
     return Scaffold(
       backgroundColor: _bg,
       body: Stack(
         children: [
-          _buildBackground(mode),
+          Positioned.fill(child: _buildBackground(mode)),
           SafeArea(
             child: Column(
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(15, 10, 15, 0),
-                  child: _reveal(0.0, _buildTopBar()),
+                  child: _reveal(0.0, _buildTopBar(mode)),
                 ),
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.only(top: 20, bottom: 14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 22),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 22),
-                          child: _reveal(0.1, _buildHeading()),
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: _reveal(0.06, _buildHeading()),
                         ),
-                        const SizedBox(height: 20),
-                        _reveal(
-                          0.2,
-                          SizedBox(
-                            height: pagerHeight,
-                            child: PageView.builder(
-                              controller: _pageController,
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: _modes.length,
-                              onPageChanged: (i) {
-                                VibrationService.tap();
-                                setState(() => _selectedMode = i);
-                              },
-                              itemBuilder: (context, i) => _buildPage(i),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
+                        _reveal(0.16, _buildCarousel()),
+                        const SizedBox(height: 12),
                       ],
                     ),
                   ),
                 ),
-                _reveal(0.45, _buildBottomBar(mode)),
+                _reveal(0.42, _buildBottomBar(mode)),
               ],
             ),
           ),
@@ -306,38 +344,77 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     );
   }
 
-  // Background
+  // --------------------------------------------------
+  // BACKGROUND
+  // --------------------------------------------------
 
   Widget _buildBackground(_GameMode mode) {
-    return Positioned.fill(
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color.lerp(_bg, mode.color, _isDark ? 0.20 : 0.075)!,
-              _bg,
-              _bg,
-            ],
-            stops: const [0.0, 0.5, 1.0],
-          ),
-        ),
-      ),
+    return AnimatedBuilder(
+      animation: _ambient,
+      builder: (context, _) {
+        final drift = math.sin(_ambient.value * math.pi) * 22;
+
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _MazePainter(
+                  color: (_isDark ? Colors.white : Colors.black)
+                      .withValues(alpha: _isDark ? 0.03 : 0.035),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -150 + drift,
+              right: -120,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 600),
+                width: 360,
+                height: 360,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      mode.color.withValues(alpha: _isDark ? 0.28 : 0.16),
+                      mode.color.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -140 - drift,
+              left: -150,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 600),
+                width: 340,
+                height: 340,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      mode.colorDeep.withValues(alpha: _isDark ? 0.20 : 0.11),
+                      mode.colorDeep.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  // Top bar with coin pill
+  // --------------------------------------------------
+  // TOP BAR
+  // --------------------------------------------------
 
-  Widget _buildTopBar() {
-    final mode = _modes[_selectedMode];
-
+  Widget _buildTopBar(_GameMode mode) {
     return Row(
       children: [
         AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 400),
           width: 46,
           height: 46,
           decoration: BoxDecoration(
@@ -346,16 +423,23 @@ class _GameIntroScreenState extends State<GameIntroScreen>
               end: Alignment.bottomRight,
               colors: [mode.color, mode.colorDeep],
             ),
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.25),
+            ),
             boxShadow: [
               BoxShadow(
-                color: mode.color.withValues(alpha: 0.25),
-                blurRadius: 15,
-                offset: const Offset(0, 3),
+                color: mode.color.withValues(alpha: 0.35),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
-          child: const Icon(Icons.route_rounded, color: Colors.white, size: 25),
+          child: const Icon(
+            Icons.route_rounded,
+            color: Colors.white,
+            size: 24,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -366,98 +450,85 @@ class _GameIntroScreenState extends State<GameIntroScreen>
               Text(
                 'Arrow Maze',
                 style: TextStyle(
-                  fontSize: 21,
-                  letterSpacing: -0.4,
                   color: _textPrimary,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
+                  letterSpacing: -0.6,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                child: Text(
-                  mode.title,
-                  key: ValueKey(mode.title),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: mode.color,
-                    fontWeight: FontWeight.w700,
-                  ),
+              const SizedBox(height: 1),
+              Text(
+                'Think • Trace • Escape',
+                style: TextStyle(
+                  color: _textSecondary,
+                  fontSize: 11,
+                  letterSpacing: 0.3,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
         ),
-
-        // Coin pill
         _buildCoinPill(),
         const SizedBox(width: 9),
-        // Settings button
-        _glassIconButton(icon: Icons.settings_rounded, onTap: _openSettings),
+        _glassIconButton(
+          icon: Icons.settings_rounded,
+          onTap: _openSettings,
+        ),
       ],
     );
   }
 
-  // Premium coin balance pill
   Widget _buildCoinPill() {
-    return GestureDetector(
-      onTap: () {
-        // Get.to(() => const GameStoreScreen());
-      },
-      child: Container(
-        height: 38,
-        padding: const EdgeInsets.only(left: 7, right: 7),
-        decoration: BoxDecoration(
-          color: _isDark
-              ? Colors.white.withValues(alpha: 0.07)
-              : Colors.white.withValues(alpha: 0.88),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: _isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.black.withValues(alpha: 0.04),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Gold coin icon
-            Container(
-              width: 25,
-              height: 25,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFFFE58A),
-                    Color(0xFFFFB52E),
-                    Color(0xFFE88B16),
-                  ],
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.fromLTRB(5, 0, 13, 0),
+      decoration: BoxDecoration(
+        color: _surface.withValues(alpha: _isDark ? 0.75 : 0.95),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _hairline),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFFFE9A0),
+                  Color(0xFFFFB52E),
+                  Color(0xFFE07F0E),
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _gold.withValues(alpha: 0.35),
+                  blurRadius: 10,
                 ),
-              ),
-              child: const Icon(
-                Icons.monetization_on_rounded,
-                color: Color(0xFF8B4B00),
-                size: 20,
-              ),
+              ],
             ),
-
-            const SizedBox(width: 6),
-
-            // Coin count
-            Text(
-              '$_coinCount',
-              style: TextStyle(
-                color: _textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.2,
-              ),
+            child: const Icon(
+              Icons.monetization_on_rounded,
+              color: Color(0xFF7A3F00),
+              size: 20,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$_coinCount',
+            style: TextStyle(
+              color: _textPrimary,
+              fontSize: 14,
+              letterSpacing: -0.2,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -467,280 +538,572 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     required VoidCallback onTap,
   }) {
     return Material(
-      color: _isDark
-          ? Colors.white.withValues(alpha: 0.07)
-          : Colors.white.withValues(alpha: 0.88),
-      shape: const CircleBorder(),
+      color: _surface.withValues(alpha: _isDark ? 0.75 : 0.95),
+      shape: CircleBorder(side: BorderSide(color: _hairline)),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
         child: SizedBox(
           width: 40,
           height: 40,
-          child: Icon(icon, size: 22, color: _textPrimary),
+          child: Icon(icon, size: 20, color: _textPrimary),
         ),
       ),
     );
   }
 
-  // Heading
+  // --------------------------------------------------
+  // HEADING
+  // --------------------------------------------------
 
   Widget _buildHeading() {
-    final mode = _modes[_selectedMode];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Choose your',
-              style: TextStyle(
-                color: _textPrimary,
-                fontSize: 28,
-                height: 1.1,
-                letterSpacing: -1.0,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              transitionBuilder: (child, animation) => FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.15),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                ),
-              ),
-              child: Text(
-                'game mode',
-                key: ValueKey(mode.title),
-                style: TextStyle(
-                  color: mode.color,
-                  fontSize: 28,
-                  height: 1.1,
-                  letterSpacing: -1.0,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
+        Text(
+          'How do you want\nto play today?',
+          style: TextStyle(
+            color: _textPrimary,
+            fontSize: 30,
+            height: 1.07,
+            letterSpacing: -1.3,
+            fontWeight: FontWeight.w900,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Swipe to explore. You can switch any time.',
+          'Swipe to explore modes. Progress is saved separately.',
           style: TextStyle(
-            color: _textSecondary.withValues(alpha: 0.95),
-            fontSize: 14,
+            color: _textSecondary,
+            fontSize: 13,
+            height: 1.45,
           ),
         ),
       ],
     );
   }
 
-  // Mode pager
+  // --------------------------------------------------
+  // CAROUSEL  (mode card + separate progress card per page)
+  // --------------------------------------------------
 
-  Widget _buildPage(int index) {
-    return AnimatedBuilder(
-      animation: _pageController,
-      builder: (context, _) {
-        double page = _selectedMode.toDouble();
+  Widget _buildCarousel() {
+    return SizedBox(
+      height: 468,
+      child: PageView.builder(
+        controller: _pageController,
+        physics: const BouncingScrollPhysics(),
+        itemCount: _modes.length,
+        onPageChanged: _onPageChanged,
+        itemBuilder: (context, index) {
+          return AnimatedBuilder(
+            animation: _pageController,
+            builder: (context, child) {
+              double page = _selectedMode.toDouble();
+              if (_pageController.position.haveDimensions) {
+                page = _pageController.page ?? page;
+              }
 
-        if (_pageController.hasClients &&
-            _pageController.position.haveDimensions) {
-          page = _pageController.page ?? page;
-        }
+              final distance = (page - index).abs().clamp(0.0, 1.0);
+              final scale = 1 - (distance * 0.08);
+              final opacity = 1 - (distance * 0.7);
 
-        final distance = (page - index).abs().clamp(0.0, 1.0).toDouble();
-
-        final scale = 1.0 - 0.07 * distance;
-        final opacity = 1.0 - 0.45 * distance;
-
-        return Transform.scale(
-          scale: scale,
-          child: Opacity(
-            opacity: opacity,
+              return Center(
+                child: Transform.scale(
+                  scale: scale,
+                  child: Opacity(opacity: opacity, child: child),
+                ),
+              );
+            },
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
-              child: GestureDetector(
-                onTap: () => _selectMode(index),
-                child: _modeCard(_modes[index], index == _selectedMode),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              child: Column(
+                children: [
+                  Expanded(child: _buildModeCard(_modes[index], index)),
+                  _buildConnector(_modes[index]),
+                  _buildProgressCard(_modes[index], index),
+                ],
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
-  Widget _modeCard(_GameMode mode, bool selected) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color.lerp(_surface, mode.color, _isDark ? 0.30 : 0.08)!,
-            _surface,
-            Color.lerp(_surface, mode.colorDeep, _isDark ? 0.10 : 0.025)!,
-          ],
-          stops: const [0.0, 0.55, 1.0],
+  // Small link between the mode card and its progress card
+  Widget _buildConnector(_GameMode mode) {
+    return SizedBox(
+      height: 20,
+      child: Center(
+        child: Container(
+          width: 3,
+          height: 19,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(3),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                mode.colorDeep.withValues(alpha: 0.9),
+                mode.color.withValues(alpha: 0.35),
+              ],
+            ),
+          ),
         ),
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -30,
-            top: -24,
-            child: Transform.rotate(
-              angle: -0.0,
-              child: Icon(
-                mode.icon,
-                size: 190,
-                color: mode.color.withValues(alpha: _isDark ? 0.10 : 0.07),
-              ),
-            ),
+    );
+  }
+
+  Widget _buildModeCard(_GameMode mode, int index) {
+    final selected = index == _selectedMode;
+
+    return GestureDetector(
+      onTap: () => _selectMode(index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [mode.color, mode.colorDeep],
           ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 90,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.white.withValues(alpha: _isDark ? 0.07 : 0.65),
-                    Colors.white.withValues(alpha: 0),
-                  ],
+          border: Border.all(
+            color: Colors.white.withValues(alpha: selected ? 0.50 : 0.16),
+            width: selected ? 0.5 : 0,
+          ),
+          boxShadow: [
+            // 1. Colored glow: the main "premium" light under the card
+            BoxShadow(
+              color: mode.color.withValues(
+                alpha: selected ? (_isDark ? 0.42 : 0.34) : 0.10,
+              ),
+              blurRadius: selected ? 32 : 14,
+              spreadRadius: selected ? -6 : -2,
+              offset: Offset(0, selected ? 16 : 6),
+            ),
+
+            // 2. Tight contact shadow in the deep tint: grounds the card
+            BoxShadow(
+              color: mode.colorDeep.withValues(alpha: selected ? 0.35 : 0.12),
+              blurRadius: selected ? 12 : 6,
+              offset: Offset(0, selected ? 6 : 3),
+            ),
+
+            // 3. Wide neutral ambient shadow: adds depth against the background
+            BoxShadow(
+              color: Colors.black.withValues(
+                alpha: _isDark
+                    ? (selected ? 0.35 : 0.20)
+                    : (selected ? 0.08 : 0.04),
+              ),
+              blurRadius: 40,
+              offset: const Offset(0, 20),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(29),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _MazePainter(
+                    color: Colors.white.withValues(alpha: 0.09),
+                    cell: 28,
+                    seed: index + 4,
+                  ),
                 ),
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Positioned(
+                right: -30,
+                bottom: 30,
+                child: Icon(
+                  mode.icon,
+                  size: 190,
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 110,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.18),
+                        Colors.white.withValues(alpha: 0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 130,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0),
+                        Colors.black.withValues(alpha: 0.22),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 62,
-                      height: 62,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(32),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [mode.color, mode.colorDeep],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: mode.color.withValues(
-                              alpha: _isDark ? 0.3 : 0.24,
+                    Row(
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.20),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.32),
                             ),
-                            blurRadius: 30,
-                            offset: const Offset(0, 5),
+                          ),
+                          child: Icon(mode.icon, color: Colors.white, size: 27),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.20),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            mode.tagline,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9.5,
+                              letterSpacing: 1.2,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      mode.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        height: 1.05,
+                        letterSpacing: -1,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      mode.subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.88),
+                        fontSize: 13,
+                        height: 1.42,
+                      ),
+                    ),
+                    const Spacer(),
+                    Wrap(
+                      spacing: 7,
+                      runSpacing: 7,
+                      children: [
+                        for (final feature in mode.features)
+                          _featureChip(feature),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(12, 9, 9, 9),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.20),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.14),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(mode.detailIcon, size: 18, color: Colors.white),
+                          const SizedBox(width: 9),
+                          Expanded(
+                            child: Text(
+                              mode.detail,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                letterSpacing: -0.1,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 280),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  selected
+                                      ? Icons.check_rounded
+                                      : Icons.swipe_rounded,
+                                  size: 13,
+                                  color:
+                                  selected ? mode.colorDeep : Colors.white,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  selected ? 'Selected' : 'Select',
+                                  style: TextStyle(
+                                    color: selected
+                                        ? mode.colorDeep
+                                        : Colors.white,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                      child: Icon(mode.icon, size: 32, color: Colors.white),
                     ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _featureChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.26),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.check_rounded, size: 12, color: Colors.white),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --------------------------------------------------
+  // PROGRESS CARD (separate, styled to match its mode)
+  // --------------------------------------------------
+
+  Widget _buildProgressCard(_GameMode mode, int index) {
+    final progress = _progressFor(_gameModeAt(index));
+    final percent = progress.totalLevels == 0
+        ? 0.0
+        : (progress.clearedLevels / progress.totalLevels).clamp(0.0, 1.0);
+    final left = math.max(0, progress.totalLevels - progress.clearedLevels);
+
+    return Container(
+      height: 110,
+      padding: const EdgeInsets.fromLTRB(14, 10, 16, 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        color: Color.lerp(_surface, mode.color, _isDark ? 0.10 : 0.05),
+        border: Border.all(
+          color: mode.color.withValues(alpha: _isDark ? 0.40 : 0.30),
+          width: 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: mode.color.withValues(alpha: _isDark ? 0.10 : 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Progress ring
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: percent),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, _) {
+              return SizedBox(
+                width: 64,
+                height: 64,
+                child: CustomPaint(
+                  painter: _RingPainter(
+                    progress: value,
+                    color: mode.color,
+                    colorDeep: mode.colorDeep,
+                    track: _isDark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.black.withValues(alpha: 0.07),
+                    stroke: 6.5,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${(value * 100).round()}%',
+                      style: TextStyle(
+                        color: _textPrimary,
+                        fontSize: 13,
+                        letterSpacing: -0.3,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(width: 14),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Level progress',
+                      style: TextStyle(
+                        color: _textSecondary,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+                        horizontal: 8,
+                        vertical: 3,
                       ),
                       decoration: BoxDecoration(
                         color: mode.color.withValues(
-                          alpha: _isDark ? 0.20 : 0.15,
+                          alpha: _isDark ? 0.18 : 0.12,
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: mode.color.withValues(
-                            alpha: _isDark ? 0.10 : 0.15,
-                          ),
-                        ),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        mode.tagline,
+                        'Level ${progress.currentLevel}',
                         style: TextStyle(
                           color: mode.color,
                           fontSize: 10.5,
-                          letterSpacing: 1.4,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
                   ],
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      mode.title,
-                      style: TextStyle(
-                        color: _textPrimary,
-                        fontSize: 26,
-                        letterSpacing: -0.7,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      mode.subtitle,
-                      style: TextStyle(
-                        color: _textSecondary,
-                        fontSize: 13.5,
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  '${progress.clearedLevels} of ${progress.totalLevels} cleared',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _textPrimary,
+                    fontSize: 16,
+                    letterSpacing: -0.4,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final feature in mode.features)
-                      _featureChip(feature, mode.color),
-                  ],
-                ),
-                Column(
-                  children: [
-                    Container(
-                      height: 1,
-                      color: _isDark
-                          ? Colors.white.withValues(alpha: 0.08)
-                          : const Color(0xFFE9EAF2),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Icon(mode.detailIcon, size: 18, color: mode.color),
-                        const SizedBox(width: 8),
-                        Text(
-                          mode.detail,
-                          style: TextStyle(
-                            color: mode.color,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
+                const SizedBox(height: 8),
+                TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: percent),
+                  duration: const Duration(milliseconds: 900),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, _) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Stack(
+                        children: [
+                          Container(
+                            height: 6,
+                            color: _isDark
+                                ? Colors.white.withValues(alpha: 0.08)
+                                : Colors.black.withValues(alpha: 0.07),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          FractionallySizedBox(
+                            widthFactor: value,
+                            child: Container(
+                              height: 6,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [mode.color, mode.colorDeep],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  left == 0
+                      ? 'All levels cleared'
+                      : left == 1
+                      ? '1 level to go'
+                      : '$left levels to go',
+                  style: TextStyle(
+                    color: _textSecondary,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -750,74 +1113,40 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     );
   }
 
-  Widget _featureChip(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: _isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : const Color(0xFFF0F1F8),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _isDark
-              ? Colors.white.withValues(alpha: 0.03)
-              : const Color(0xFFE5E7F0),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.check_circle_rounded, size: 13, color: color),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              color: _isDark
-                  ? const Color(0xFFD8D9EE)
-                  : const Color(0xFF44465E),
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Bottom CTA
+  // --------------------------------------------------
+  // BOTTOM START BUTTON
+  // --------------------------------------------------
 
   Widget _buildBottomBar(_GameMode mode) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            _bg.withValues(alpha: 0),
-            _bg.withValues(alpha: _isDark ? 1 : 0.97),
-          ],
-        ),
+        color: _bg.withValues(alpha: _isDark ? 0.94 : 0.96),
+        border: Border(top: BorderSide(color: _hairline)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
             width: double.infinity,
-            height: 62,
-            child: DecoratedBox(
+            height: 60,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 350),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(28),
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [mode.color, mode.colorDeep],
                 ),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.22),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: mode.color.withValues(alpha: _isDark ? 0.30 : 0.22),
-                    blurRadius: 15,
-                    offset: const Offset(0, 3),
+                    color: mode.color.withValues(alpha: _isDark ? 0.40 : 0.30),
+                    blurRadius: 24,
+                    offset: const Offset(0, 9),
                   ),
                 ],
               ),
@@ -829,37 +1158,38 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(28),
                   ),
                 ),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 220),
-                  transitionBuilder: (child, anim) => FadeTransition(
-                    opacity: anim,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.25),
-                        end: Offset.zero,
-                      ).animate(anim),
-                      child: child,
-                    ),
-                  ),
                   child: Row(
                     key: ValueKey(_selectedMode),
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(mode.ctaIcon, size: 24),
-                      const SizedBox(width: 10),
+                      Icon(mode.ctaIcon, size: 22),
+                      const SizedBox(width: 9),
                       Text(
                         mode.cta,
                         style: const TextStyle(
-                          fontSize: 17,
+                          fontSize: 16.5,
                           letterSpacing: -0.2,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(Icons.arrow_forward_rounded, size: 21),
+                      Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.22),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -871,9 +1201,9 @@ class _GameIntroScreenState extends State<GameIntroScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.lock_clock_rounded,
+                Icons.cloud_done_rounded,
                 size: 13,
-                color: _textSecondary.withValues(alpha: 0.8),
+                color: _textSecondary.withValues(alpha: 0.85),
               ),
               const SizedBox(width: 6),
               Flexible(
@@ -881,8 +1211,8 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                   'Progress is saved separately for each mode',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: _textSecondary.withValues(alpha: 0.8),
-                    fontSize: 11.5,
+                    color: _textSecondary.withValues(alpha: 0.85),
+                    fontSize: 10.5,
                   ),
                 ),
               ),
@@ -894,7 +1224,129 @@ class _GameIntroScreenState extends State<GameIntroScreen>
   }
 }
 
-// Game mode model
+// --------------------------------------------------
+// MAZE TEXTURE PAINTER
+// --------------------------------------------------
+
+class _MazePainter extends CustomPainter {
+  final Color color;
+  final double cell;
+  final int seed;
+
+  const _MazePainter({
+    required this.color,
+    this.cell = 36,
+    this.seed = 11,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+
+    final rnd = math.Random(seed);
+
+    for (double y = 0; y < size.height; y += cell) {
+      for (double x = 0; x < size.width; x += cell) {
+        if (rnd.nextBool()) {
+          canvas.drawLine(Offset(x, y), Offset(x + cell, y), paint);
+        } else {
+          canvas.drawLine(Offset(x, y), Offset(x, y + cell), paint);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MazePainter old) =>
+      old.color != color || old.cell != cell || old.seed != seed;
+}
+
+// --------------------------------------------------
+// PROGRESS RING PAINTER
+// --------------------------------------------------
+
+class _RingPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  final Color colorDeep;
+  final Color track;
+  final double stroke;
+
+  const _RingPainter({
+    required this.progress,
+    required this.color,
+    required this.colorDeep,
+    required this.track,
+    required this.stroke,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final center = rect.center;
+    final radius = (math.min(size.width, size.height) - stroke) / 2;
+    final arcRect = Rect.fromCircle(center: center, radius: radius);
+
+    final trackPaint = Paint()
+      ..color = track
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke;
+
+    canvas.drawCircle(center, radius, trackPaint);
+
+    if (progress <= 0) return;
+
+    final arcPaint = Paint()
+      ..shader = SweepGradient(
+        startAngle: -math.pi / 2,
+        endAngle: 3 * math.pi / 2,
+        colors: [colorDeep, color, colorDeep],
+        transform: const GradientRotation(-math.pi / 2),
+      ).createShader(arcRect)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = stroke;
+
+    canvas.drawArc(
+      arcRect,
+      -math.pi / 2,
+      2 * math.pi * progress,
+      false,
+      arcPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter old) =>
+      old.progress != progress ||
+          old.color != color ||
+          old.colorDeep != colorDeep ||
+          old.track != track ||
+          old.stroke != stroke;
+}
+
+// --------------------------------------------------
+// PROGRESS MODEL
+// --------------------------------------------------
+
+class _ModeProgress {
+  final int currentLevel;
+  final int clearedLevels;
+  final int totalLevels;
+
+  const _ModeProgress({
+    required this.currentLevel,
+    required this.clearedLevels,
+    required this.totalLevels,
+  });
+}
+
+// --------------------------------------------------
+// GAME MODE MODEL
+// --------------------------------------------------
 
 class _GameMode {
   final String title;

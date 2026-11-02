@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -18,61 +20,74 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  static const Color _accent = Color(0xFF5B5BF0);
-  static const Color _accentDeep = Color(0xFF7C5CFA);
-  static const Color _red = Color(0xFFD94F83);
+  static const Color _accent = Color(0xFF8175FF);
+  static const Color _accentDeep = Color(0xFF4B3FD1);
+  static const Color _red = Color(0xFFFF4D5E);
+
+  static const Color _darkBg = Color(0xFF07080F);
+  static const Color _darkSurface = Color(0xFF12141F);
+  static const Color _darkTextPrimary = Color(0xFFF7F7FC);
+  static const Color _darkTextSecondary = Color(0xFF8E92AB);
+
+  static const Color _lightBg = Color(0xFFF4F5FA);
+  static const Color _lightSurface = Color(0xFFFFFFFF);
+  static const Color _lightTextPrimary = Color(0xFF14162A);
+  static const Color _lightTextSecondary = Color(0xFF6F7390);
 
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
   bool _darkModeEnabled = false;
   String _defaultMode = 'Normal Mode';
 
+  late final AnimationController _ambient;
+
   ThemeController get _themeController => Get.find<ThemeController>();
 
   bool get _isDark => _themeController.isDarkMode.value;
 
-  Color get _ink => _isDark ? const Color(0xFFF5F5FF) : const Color(0xFF17182B);
+  Color get _ink => _isDark ? _darkTextPrimary : _lightTextPrimary;
 
   Color get _muted =>
-      _isDark ? const Color(0xFF9B9DB8) : const Color(0xFF6F7289);
+      _isDark ? _darkTextSecondary : _lightTextSecondary;
 
-  // Same as intro screen background
-  Color get _background =>
-      _isDark ? const Color(0xFF0A0B14) : const Color(0xFFF6F7FC);
+  Color get _background => _isDark ? _darkBg : _lightBg;
 
-  // Same as intro screen surface
-  Color get _surface => _isDark ? const Color(0xFF14162A) : Colors.white;
+  Color get _surface => _isDark ? _darkSurface : _lightSurface;
 
   Color get _dividerColor =>
-      _isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFEDEEF5);
+      _isDark
+          ? Colors.white.withValues(alpha: 0.07)
+          : Colors.black.withValues(alpha: 0.065);
+
+  Color get _cardBorder =>
+      _isDark
+          ? Colors.white.withValues(alpha: 0.08)
+          : Colors.black.withValues(alpha: 0.055);
 
   Color get _dialogOptionColor =>
-      _isDark ? const Color(0xFF1B1E36) : const Color(0xFFF0F1F8);
+      _isDark ? const Color(0xFF1B1E2C) : const Color(0xFFF3F4FA);
 
-  Color get _cardBorder => _isDark
-      ? Colors.white.withValues(alpha: 0.07)
-      : const Color(0xFF5B5BF0).withValues(alpha: 0.06);
-
-  List<BoxShadow> get _cardShadow => _isDark
-      ? [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ]
-      : [
-          BoxShadow(
-            color: const Color(0xFF5B5BF0).withValues(alpha: 0.08),
-            blurRadius: 28,
-            offset: const Offset(0, 12),
-          ),
-        ];
+  List<BoxShadow> get _cardShadow =>
+      [
+        BoxShadow(
+          color: _isDark
+              ? Colors.black.withValues(alpha: 0.25)
+              : const Color(0xFF8175FF).withValues(alpha: 0.055),
+          blurRadius: 24,
+          offset: const Offset(0, 9),
+        ),
+      ];
 
   @override
   void initState() {
     super.initState();
+
     _loadSettings();
+
+    _ambient = AnimationController(
+      vsync: Navigator.of(context),
+      duration: const Duration(seconds: 7),
+    );
   }
 
   void _loadSettings() {
@@ -83,135 +98,224 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   @override
+  void dispose() {
+    _ambient.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Obx(() {
       return Scaffold(
         backgroundColor: _background,
         body: Stack(
           children: [
-            // Soft ambient glow behind the header
-            Positioned(
-              top: -120,
-              right: -80,
-              child: Container(
-                width: 280,
-                height: 280,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      _accent.withValues(alpha: _isDark ? 0.28 : 0.16),
-                      _accent.withValues(alpha: 0),
-                    ],
-                  ),
-                ),
-              ),
+            Positioned.fill(
+              child: _buildBackground(),
             ),
+
             SafeArea(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(18, 12, 18, 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildAppBar(),
-                    const SizedBox(height: 22),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                    child: _buildAppBar(),
+                  ),
 
-                    _sectionTitle('Gameplay'),
-                    const SizedBox(height: 12),
-
-                    _buildSettingsCard([
-                      _buildSwitchTile(
-                        icon: Icons.volume_up_rounded,
-                        iconColor: _accent,
-                        title: 'Sound Effects',
-                        subtitle: 'Sounds during gameplay',
-                        value: _soundEnabled,
-                        onChanged: (value) async {
-                          setState(() => _soundEnabled = value);
-                          await SettingsStorage.setSoundEnabled(value);
-                        },
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(
+                        18,
+                        26,
+                        18,
+                        35,
                       ),
-                      _buildDivider(),
-                      _buildSwitchTile(
-                        icon: Icons.vibration_rounded,
-                        iconColor: const Color(0xFF219B68),
-                        title: 'Vibration',
-                        subtitle: 'Haptic feedback on moves',
-                        value: _vibrationEnabled,
-                        onChanged: (value) async {
-                          setState(() => _vibrationEnabled = value);
-                          await SettingsStorage.setVibrationEnabled(value);
-                        },
-                      ),
-                      _buildDivider(),
-                      _buildActionTile(
-                        icon: Icons.timer_rounded,
-                        iconColor: const Color(0xFFE99A32),
-                        title: 'Default Game Mode',
-                        subtitle: _defaultMode,
-                        onTap: _showGameModeDialog,
-                      ),
-                    ]),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // GAMEPLAY
+                          _sectionTitle(
+                            'Gameplay',
+                            Icons.sports_esports_rounded,
+                          ),
+                          const SizedBox(height: 13),
 
-                    const SizedBox(height: 26),
+                          _buildSettingsCard([
+                            _buildSwitchTile(
+                              icon: Icons.volume_up_rounded,
+                              iconColor: _accent,
+                              title: 'Sound Effects',
+                              subtitle: 'Sounds during gameplay',
+                              value: _soundEnabled,
+                              onChanged: (value) async {
+                                setState(() => _soundEnabled = value);
+                                await SettingsStorage.setSoundEnabled(value);
+                              },
+                            ),
 
-                    _sectionTitle('Preferences'),
-                    const SizedBox(height: 12),
+                            _buildDivider(),
 
-                    _buildSettingsCard([
-                      _buildSwitchTile(
-                        icon: Icons.dark_mode_rounded,
-                        iconColor: const Color(0xFF3978D4),
-                        title: 'Dark Mode',
-                        subtitle: 'Use a darker appearance',
-                        value: _darkModeEnabled,
-                        onChanged: (value) async {
-                          setState(() => _darkModeEnabled = value);
-                          await _themeController.toggleTheme(value);
-                        },
+                            _buildSwitchTile(
+                              icon: Icons.vibration_rounded,
+                              iconColor: const Color(0xFF35D68A),
+                              title: 'Vibration',
+                              subtitle: 'Haptic feedback on moves',
+                              value: _vibrationEnabled,
+                              onChanged: (value) async {
+                                setState(() => _vibrationEnabled = value);
+                                await SettingsStorage.setVibrationEnabled(
+                                  value,
+                                );
+                              },
+                            ),
+
+                            _buildDivider(),
+
+                            _buildActionTile(
+                              icon: Icons.timer_rounded,
+                              iconColor: const Color(0xFFFFB34F),
+                              title: 'Default Game Mode',
+                              subtitle: _defaultMode,
+                              onTap: _showGameModeDialog,
+                            ),
+                          ]),
+
+                          const SizedBox(height: 28),
+
+                          // PREFERENCES
+                          _sectionTitle(
+                            'Preferences',
+                            Icons.tune_rounded,
+                          ),
+                          const SizedBox(height: 13),
+
+                          _buildSettingsCard([
+                            _buildSwitchTile(
+                              icon: Icons.dark_mode_rounded,
+                              iconColor: const Color(0xFF6D9FFF),
+                              title: 'Dark Mode',
+                              subtitle: 'Use a darker appearance',
+                              value: _darkModeEnabled,
+                              onChanged: (value) async {
+                                setState(() => _darkModeEnabled = value);
+                                await _themeController.toggleTheme(value);
+                              },
+                            ),
+
+                            _buildDivider(),
+
+                            _buildActionTile(
+                              icon: Icons.restart_alt_rounded,
+                              iconColor: _red,
+                              title: 'Reset Progress',
+                              subtitle: 'Restart your level progress',
+                              onTap: _confirmReset,
+                              danger: true,
+                            ),
+                          ]),
+
+                          const SizedBox(height: 28),
+
+                          // ABOUT
+                          _sectionTitle(
+                            'About',
+                            Icons.info_outline_rounded,
+                          ),
+                          const SizedBox(height: 13),
+
+                          _buildSettingsCard([
+                            _buildActionTile(
+                              icon: Icons.shield_outlined,
+                              iconColor: _accent,
+                              title: 'Privacy Policy',
+                              subtitle: 'How your data is handled',
+                              onTap: () {
+                                _showSnackbar(
+                                  'Privacy Policy',
+                                  'Connect your privacy policy URL here.',
+                                );
+                              },
+                            ),
+
+                            _buildDivider(),
+
+                            _buildActionTile(
+                              icon: Icons.info_outline_rounded,
+                              iconColor: const Color(0xFF6D9FFF),
+                              title: 'App Version',
+                              subtitle: 'Version 1.0.0',
+                              showArrow: false,
+                              onTap: () {},
+                            ),
+                          ]),
+
+                          const SizedBox(height: 30),
+
+                          // FOOTER
+                          Center(
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 43,
+                                  height: 43,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        _accent,
+                                        _accentDeep,
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(15),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _accent.withValues(alpha: 0.25),
+                                        blurRadius: 15,
+                                        offset: const Offset(0, 5),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.route_rounded,
+                                    color: Colors.white,
+                                    size: 23,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'ARROW MAZE',
+                                  style: TextStyle(
+                                    color: _ink,
+                                    fontSize: 12,
+                                    letterSpacing: 2,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  'Think • Trace • Escape',
+                                  style: TextStyle(
+                                    color: _muted,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 7),
+                                Text(
+                                  'Version 1.0.0',
+                                  style: TextStyle(
+                                    color: _muted.withValues(alpha: 0.7),
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      _buildDivider(),
-                      _buildActionTile(
-                        icon: Icons.restart_alt_rounded,
-                        iconColor: _red,
-                        title: 'Reset Progress',
-                        subtitle: 'Restart your level progress',
-                        onTap: _confirmReset,
-                        danger: true,
-                      ),
-                    ]),
-
-                    const SizedBox(height: 26),
-
-                    _sectionTitle('About'),
-                    const SizedBox(height: 12),
-
-                    _buildSettingsCard([
-                      _buildActionTile(
-                        icon: Icons.shield_outlined,
-                        iconColor: _accent,
-                        title: 'Privacy Policy',
-                        subtitle: 'How your data is handled',
-                        onTap: () {
-                          _showSnackbar(
-                            'Privacy Policy',
-                            'Connect your privacy policy URL here.',
-                          );
-                        },
-                      ),
-                      _buildDivider(),
-                      _buildActionTile(
-                        icon: Icons.info_outline_rounded,
-                        iconColor: const Color(0xFF3978D4),
-                        title: 'App Version',
-                        subtitle: 'Version 1.0.0',
-                        showArrow: false,
-                        onTap: () {},
-                      ),
-                    ]),
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -220,28 +324,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  Widget _buildAppBar() {
-    return Row(
-      spacing: 8,
+  // --------------------------------------------------
+  // BACKGROUND - MATCH INTRO SCREEN
+  // --------------------------------------------------
+
+  Widget _buildBackground() {
+    return Stack(
       children: [
-        RoundButton(
-          icon: Icons.arrow_back_rounded,
-          size: 46,
-          iconSize: 23,
-          radius: 15,
-          onTap: () {
-            VibrationService.tap();
-            Get.back();
-          },
+        Positioned.fill(
+          child: CustomPaint(
+            painter: _SettingsMazePainter(
+              color: (_isDark ? Colors.white : Colors.black)
+                  .withValues(alpha: _isDark ? 0.03 : 0.035),
+            ),
+          ),
         ),
-        Expanded(
-          child: Text(
-            'Settings',
-            style: TextStyle(
-              color: _ink,
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.6,
+
+        Positioned(
+          top: -150,
+          right: -120,
+          child: Container(
+            width: 360,
+            height: 360,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  _accent.withValues(alpha: _isDark ? 0.24 : 0.13),
+                  _accent.withValues(alpha: 0),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        Positioned(
+          bottom: -150,
+          left: -150,
+          child: Container(
+            width: 340,
+            height: 340,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  _accentDeep.withValues(alpha: _isDark ? 0.16 : 0.08),
+                  _accentDeep.withValues(alpha: 0),
+                ],
+              ),
             ),
           ),
         ),
@@ -249,31 +379,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _sectionTitle(String title) {
+  // --------------------------------------------------
+  // APP BAR
+  // --------------------------------------------------
+
+  Widget _buildAppBar() {
+    return Row(
+      children: [
+        RoundButton(
+          icon: Icons.arrow_back_rounded,
+          size: 44,
+          iconSize: 21,
+          radius: 15,
+          onTap: () {
+            VibrationService.tap();
+            Get.back();
+          },
+        ),
+
+        const SizedBox(width: 13),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Settings',
+                style: TextStyle(
+                  color: _ink,
+                  fontSize: 23,
+                  letterSpacing: -0.7,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              Text(
+                'Customize your game experience',
+                style: TextStyle(
+                  color: _muted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --------------------------------------------------
+  // SECTION TITLE
+  // --------------------------------------------------
+
+  Widget _sectionTitle(String title, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.only(left: 3),
       child: Row(
         children: [
           Container(
-            width: 4,
-            height: 16,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [_accent, _accentDeep],
-              ),
+              color: _accent.withValues(alpha: _isDark ? 0.16 : 0.09),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(
+              icon,
+              color: _accent,
+              size: 17,
             ),
           ),
+
           const SizedBox(width: 10),
+
           Text(
             title,
             style: TextStyle(
               color: _ink,
-              fontSize: 15,
-              letterSpacing: -0.2,
-              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              letterSpacing: -0.3,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],
@@ -281,27 +466,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // --------------------------------------------------
+  // SETTINGS CARD
+  // --------------------------------------------------
+
   Widget _buildSettingsCard(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
         color: _surface,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(25),
         border: Border.all(color: _cardBorder),
         boxShadow: _cardShadow,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: Column(children: children),
+        borderRadius: BorderRadius.circular(25),
+        child: Column(
+          children: children,
+        ),
       ),
     );
   }
 
   Widget _buildDivider() {
     return Padding(
-      padding: const EdgeInsets.only(left: 78, right: 18),
-      child: Divider(height: 1, thickness: 1, color: _dividerColor),
+      padding: const EdgeInsets.only(left: 76, right: 18),
+      child: Divider(
+        height: 1,
+        thickness: 1,
+        color: _dividerColor,
+      ),
     );
   }
+
+  // --------------------------------------------------
+  // SWITCH TILE
+  // --------------------------------------------------
 
   Widget _buildSwitchTile({
     required IconData icon,
@@ -312,11 +511,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required ValueChanged<bool> onChanged,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 15,
+        vertical: 12,
+      ),
       child: Row(
         children: [
           _buildIconBox(icon, iconColor),
-          const SizedBox(width: 14),
+
+          const SizedBox(width: 13),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -325,16 +529,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title,
                   style: TextStyle(
                     color: _ink,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
                     letterSpacing: -0.2,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(subtitle, style: TextStyle(color: _muted, fontSize: 12)),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: _muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
           ),
+
           AppSwitch(
             value: value,
             onChanged: (newValue) {
@@ -346,6 +558,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+
+  // --------------------------------------------------
+  // ACTION TILE
+  // --------------------------------------------------
 
   Widget _buildActionTile({
     required IconData icon,
@@ -359,15 +575,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          VibrationService.tap();
+          onTap();
+        },
         splashColor: iconColor.withValues(alpha: 0.08),
-        highlightColor: iconColor.withValues(alpha: 0.05),
+        highlightColor: iconColor.withValues(alpha: 0.04),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 15,
+            vertical: 12,
+          ),
           child: Row(
             children: [
               _buildIconBox(icon, iconColor),
-              const SizedBox(width: 14),
+
+              const SizedBox(width: 13),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,35 +600,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       title,
                       style: TextStyle(
                         color: danger ? _red : _ink,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: -0.2,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: TextStyle(color: _muted, fontSize: 12),
+                      style: TextStyle(
+                        color: _muted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
               ),
+
               if (showArrow)
                 Container(
-                  width: 30,
-                  height: 30,
+                  width: 29,
+                  height: 29,
                   decoration: BoxDecoration(
                     color: _isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : const Color(0xFFF3F4FA),
+                        ? Colors.white.withValues(alpha: 0.055)
+                        : const Color(0xFFF2F3F9),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.chevron_right_rounded,
-                    color: _isDark
-                        ? const Color(0xFF8D93AD)
-                        : const Color(0xFF9A9CB4),
-                    size: 20,
+                    color: _muted,
+                    size: 19,
                   ),
                 ),
             ],
@@ -414,132 +641,174 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // --------------------------------------------------
+  // ICON BOX
+  // --------------------------------------------------
+
   Widget _buildIconBox(IconData icon, Color color) {
     return Container(
-      width: 46,
-      height: 46,
+      width: 45,
+      height: 45,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(15),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            color.withValues(alpha: _isDark ? 0.28 : 0.18),
-            color.withValues(alpha: _isDark ? 0.12 : 0.07),
+            color.withValues(alpha: _isDark ? 0.23 : 0.13),
+            color.withValues(alpha: _isDark ? 0.10 : 0.055),
           ],
         ),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: color.withValues(alpha: 0.16),
+        ),
       ),
-      child: Icon(icon, color: color, size: 22),
+      child: Icon(
+        icon,
+        color: color,
+        size: 21,
+      ),
     );
   }
 
+  // --------------------------------------------------
+  // DEFAULT GAME MODE DIALOG
+  // --------------------------------------------------
+
   void _showGameModeDialog() {
-    final modes = ['Normal Mode', 'Timed Challenge', 'Speed Run'];
+    final modes = [
+      'Normal Mode',
+      'Timed Challenge',
+      'Speed Run',
+    ];
 
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: _surface,
-              surfaceTintColor: Colors.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
-                side: BorderSide(color: _cardBorder),
-              ),
-              title: Text(
-                'Default Game Mode',
-                style: TextStyle(
-                  color: _ink,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 19,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: modes.map((mode) {
-                  final selected = _defaultMode == mode;
+        return AlertDialog(
+          backgroundColor: _surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(27),
+            side: BorderSide(color: _cardBorder),
+          ),
+          title: Text(
+            'Default Game Mode',
+            style: TextStyle(
+              color: _ink,
+              fontWeight: FontWeight.w900,
+              fontSize: 19,
+              letterSpacing: -0.4,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: modes.map((mode) {
+              final selected = _defaultMode == mode;
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () async {
-                        VibrationService.tap();
+              final Color modeColor = mode == 'Normal Mode'
+                  ? _accent
+                  : mode == 'Timed Challenge'
+                  ? const Color(0xFFFFB34F)
+                  : const Color(0xFF35D68A);
 
-                        await SettingsStorage.setDefaultGameMode(mode);
+              final IconData modeIcon = mode == 'Normal Mode'
+                  ? Icons.explore_rounded
+                  : mode == 'Timed Challenge'
+                  ? Icons.timer_rounded
+                  : Icons.bolt_rounded;
 
-                        if (!mounted || !dialogContext.mounted) return;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(17),
+                  onTap: () async {
+                    VibrationService.tap();
 
-                        setState(() => _defaultMode = mode);
-                        Navigator.pop(dialogContext);
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 15,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: selected
-                              ? LinearGradient(
-                                  colors: [
-                                    _accent.withValues(
-                                      alpha: _isDark ? 0.30 : 0.14,
-                                    ),
-                                    _accentDeep.withValues(
-                                      alpha: _isDark ? 0.18 : 0.06,
-                                    ),
-                                  ],
-                                )
-                              : null,
-                          color: selected ? null : _dialogOptionColor,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: selected
-                                ? _accent.withValues(alpha: 0.6)
-                                : _dividerColor,
-                            width: selected ? 1.4 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                mode,
-                                style: TextStyle(
-                                  color: selected
-                                      ? (_isDark
-                                            ? const Color(0xFFB5B2FF)
-                                            : _accent)
-                                      : _ink,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            if (selected)
-                              const Icon(
-                                Icons.check_circle_rounded,
-                                color: _accent,
-                                size: 22,
-                              ),
-                          ],
-                        ),
+                    await SettingsStorage.setDefaultGameMode(mode);
+
+                    if (!mounted || !dialogContext.mounted) return;
+
+                    setState(() => _defaultMode = mode);
+
+                    Navigator.pop(dialogContext);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? modeColor.withValues(
+                        alpha: _isDark ? 0.16 : 0.09,
+                      )
+                          : _dialogOptionColor,
+                      borderRadius: BorderRadius.circular(17),
+                      border: Border.all(
+                        color: selected
+                            ? modeColor.withValues(alpha: 0.55)
+                            : _dividerColor,
+                        width: selected ? 1.3 : 1,
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-            );
-          },
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 37,
+                          height: 37,
+                          decoration: BoxDecoration(
+                            color: modeColor.withValues(alpha: 0.13),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            modeIcon,
+                            color: modeColor,
+                            size: 20,
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        Expanded(
+                          child: Text(
+                            mode,
+                            style: TextStyle(
+                              color: selected ? modeColor : _ink,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+
+                        if (selected)
+                          Icon(
+                            Icons.check_circle_rounded,
+                            color: modeColor,
+                            size: 21,
+                          )
+                        else
+                          Icon(
+                            Icons.circle_outlined,
+                            color: _muted.withValues(alpha: 0.4),
+                            size: 20,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
         );
       },
     );
   }
+
+  // --------------------------------------------------
+  // RESET PROGRESS
+  // --------------------------------------------------
 
   void _confirmReset() {
     Get.dialog<void>(
@@ -547,31 +816,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: _surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(27),
           side: BorderSide(color: _cardBorder),
         ),
         icon: Container(
-          width: 56,
-          height: 56,
+          width: 57,
+          height: 57,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: _red.withValues(alpha: _isDark ? 0.2 : 0.12),
+            color: _red.withValues(alpha: _isDark ? 0.18 : 0.10),
           ),
-          child: const Icon(Icons.restart_alt_rounded, color: _red, size: 28),
+          child: const Icon(
+            Icons.restart_alt_rounded,
+            color: _red,
+            size: 29,
+          ),
         ),
         title: Text(
           'Reset Progress?',
           style: TextStyle(
             color: _ink,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.3,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.4,
           ),
         ),
         content: Text(
           'This will reset all game modes to Level 1. '
-          'Your sound, vibration, and other settings will remain unchanged.',
+              'Your sound, vibration, and other settings will remain unchanged.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: _muted, height: 1.5, fontSize: 13),
+          style: TextStyle(
+            color: _muted,
+            height: 1.5,
+            fontSize: 13,
+          ),
         ),
         actionsAlignment: MainAxisAlignment.center,
         actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -579,16 +856,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () => Get.back(),
             style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 22,
+                vertical: 14,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
             child: Text(
               'Cancel',
-              style: TextStyle(color: _muted, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: _muted,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
+
           ElevatedButton(
             onPressed: () async {
               Get.back();
@@ -599,7 +883,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 } else {
                   await Future.wait([
                     GameStorage.clearProgress(GameMode.normal.name),
-                    GameStorage.clearProgress(GameMode.timedChallenge.name),
+                    GameStorage.clearProgress(
+                      GameMode.timedChallenge.name,
+                    ),
                     GameStorage.clearProgress(GameMode.speedRun.name),
                   ]);
                 }
@@ -619,7 +905,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               backgroundColor: _red,
               foregroundColor: Colors.white,
               elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 26,
+                vertical: 14,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -634,6 +923,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // --------------------------------------------------
+  // SNACKBAR
+  // --------------------------------------------------
+
   void _showSnackbar(String title, String message) {
     Get.snackbar(
       title,
@@ -646,5 +939,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
       borderWidth: 1,
       margin: const EdgeInsets.all(16),
     );
+  }
+}
+
+// --------------------------------------------------
+// MAZE BACKGROUND PAINTER
+// --------------------------------------------------
+
+class _SettingsMazePainter extends CustomPainter {
+  final Color color;
+
+  const _SettingsMazePainter({
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const double cell = 36;
+
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+
+    final rnd = math.Random(11);
+
+    for (double y = 0; y < size.height; y += cell) {
+      for (double x = 0; x < size.width; x += cell) {
+        if (rnd.nextBool()) {
+          canvas.drawLine(
+            Offset(x, y),
+            Offset(x + cell, y),
+            paint,
+          );
+        } else {
+          canvas.drawLine(
+            Offset(x, y),
+            Offset(x, y + cell),
+            paint,
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SettingsMazePainter old) {
+    return old.color != color;
   }
 }
