@@ -35,6 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   static const Color _lightTextSecondary = Color(0xFF6F7390);
 
   bool _soundEnabled = true;
+  bool _systemTapSoundEnabled = true;
   bool _vibrationEnabled = true;
   bool _darkModeEnabled = false;
   String _defaultMode = 'Normal Mode';
@@ -47,36 +48,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Color get _ink => _isDark ? _darkTextPrimary : _lightTextPrimary;
 
-  Color get _muted =>
-      _isDark ? _darkTextSecondary : _lightTextSecondary;
+  Color get _muted => _isDark ? _darkTextSecondary : _lightTextSecondary;
 
   Color get _background => _isDark ? _darkBg : _lightBg;
 
   Color get _surface => _isDark ? _darkSurface : _lightSurface;
 
-  Color get _dividerColor =>
-      _isDark
-          ? Colors.white.withValues(alpha: 0.07)
-          : Colors.black.withValues(alpha: 0.065);
+  Color get _dividerColor => _isDark
+      ? Colors.white.withValues(alpha: 0.07)
+      : Colors.black.withValues(alpha: 0.065);
 
-  Color get _cardBorder =>
-      _isDark
-          ? Colors.white.withValues(alpha: 0.08)
-          : Colors.black.withValues(alpha: 0.055);
+  Color get _cardBorder => _isDark
+      ? Colors.white.withValues(alpha: 0.08)
+      : Colors.black.withValues(alpha: 0.055);
 
   Color get _dialogOptionColor =>
       _isDark ? const Color(0xFF1B1E2C) : const Color(0xFFF3F4FA);
 
-  List<BoxShadow> get _cardShadow =>
-      [
-        BoxShadow(
-          color: _isDark
-              ? Colors.black.withValues(alpha: 0.25)
-              : const Color(0xFF8175FF).withValues(alpha: 0.055),
-          blurRadius: 24,
-          offset: const Offset(0, 9),
-        ),
-      ];
+  List<BoxShadow> get _cardShadow => [
+    BoxShadow(
+      color: _isDark
+          ? Colors.black.withValues(alpha: 0.25)
+          : const Color(0xFF8175FF).withValues(alpha: 0.055),
+      blurRadius: 24,
+      offset: const Offset(0, 9),
+    ),
+  ];
 
   @override
   void initState() {
@@ -92,6 +89,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _loadSettings() {
     _soundEnabled = SettingsStorage.getSoundEnabled();
+    _systemTapSoundEnabled = SettingsStorage.getSystemTapSoundEnabled();
     _vibrationEnabled = SettingsStorage.getVibrationEnabled();
     _darkModeEnabled = SettingsStorage.getDarkModeEnabled();
     _defaultMode = SettingsStorage.getDefaultGameMode();
@@ -110,9 +108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: _background,
         body: Stack(
           children: [
-            Positioned.fill(
-              child: _buildBackground(),
-            ),
+            Positioned.fill(child: _buildBackground()),
 
             SafeArea(
               child: Column(
@@ -125,12 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Expanded(
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(
-                        18,
-                        26,
-                        18,
-                        35,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(18, 26, 18, 35),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -151,6 +142,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               onChanged: (value) async {
                                 setState(() => _soundEnabled = value);
                                 await SettingsStorage.setSoundEnabled(value);
+                              },
+                            ),
+
+                            _buildDivider(),
+
+                            // SYSTEM TAP SOUND
+                            _buildSwitchTile(
+                              icon: Icons.touch_app_rounded,
+                              iconColor: const Color(0xFFFFB34F),
+                              title: 'System Tap Sound',
+                              subtitle: 'Native click sound when tapping',
+                              value: _systemTapSoundEnabled,
+                              onChanged: (value) async {
+                                setState(() {
+                                  _systemTapSoundEnabled = value;
+                                });
+
+                                await SettingsStorage.setSystemTapSoundEnabled(
+                                  value,
+                                );
                               },
                             ),
 
@@ -184,10 +195,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(height: 28),
 
                           // PREFERENCES
-                          _sectionTitle(
-                            'Preferences',
-                            Icons.tune_rounded,
-                          ),
+                          _sectionTitle('Preferences', Icons.tune_rounded),
                           const SizedBox(height: 13),
 
                           _buildSettingsCard([
@@ -218,10 +226,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(height: 28),
 
                           // ABOUT
-                          _sectionTitle(
-                            'About',
-                            Icons.info_outline_rounded,
-                          ),
+                          _sectionTitle('About', Icons.info_outline_rounded),
                           const SizedBox(height: 13),
 
                           _buildSettingsCard([
@@ -261,10 +266,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   height: 43,
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
-                                      colors: [
-                                        _accent,
-                                        _accentDeep,
-                                      ],
+                                      colors: [_accent, _accentDeep],
                                     ),
                                     borderRadius: BorderRadius.circular(15),
                                     boxShadow: [
@@ -334,8 +336,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Positioned.fill(
           child: CustomPaint(
             painter: _SettingsMazePainter(
-              color: (_isDark ? Colors.white : Colors.black)
-                  .withValues(alpha: _isDark ? 0.03 : 0.035),
+              color: (_isDark ? Colors.white : Colors.black).withValues(
+                alpha: _isDark ? 0.03 : 0.035,
+              ),
             ),
           ),
         ),
@@ -392,6 +395,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           iconSize: 21,
           radius: 15,
           onTap: () {
+            SettingsStorage.playSystemTapSound();
             VibrationService.tap();
             Get.back();
           },
@@ -443,11 +447,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: _accent.withValues(alpha: _isDark ? 0.16 : 0.09),
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(
-              icon,
-              color: _accent,
-              size: 17,
-            ),
+            child: Icon(icon, color: _accent, size: 17),
           ),
 
           const SizedBox(width: 10),
@@ -480,9 +480,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(25),
-        child: Column(
-          children: children,
-        ),
+        child: Column(children: children),
       ),
     );
   }
@@ -490,11 +488,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildDivider() {
     return Padding(
       padding: const EdgeInsets.only(left: 76, right: 18),
-      child: Divider(
-        height: 1,
-        thickness: 1,
-        color: _dividerColor,
-      ),
+      child: Divider(height: 1, thickness: 1, color: _dividerColor),
     );
   }
 
@@ -511,10 +505,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required ValueChanged<bool> onChanged,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 15,
-        vertical: 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
       child: Row(
         children: [
           _buildIconBox(icon, iconColor),
@@ -549,7 +540,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           AppSwitch(
             value: value,
-            onChanged: (newValue) {
+            onChanged: (newValue) async {
+              await SettingsStorage.playSystemTapSound();
               VibrationService.tap();
               onChanged(newValue);
             },
@@ -575,17 +567,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
+        onTap: () async {
+          await SettingsStorage.playSystemTapSound();
           VibrationService.tap();
           onTap();
         },
         splashColor: iconColor.withValues(alpha: 0.08),
         highlightColor: iconColor.withValues(alpha: 0.04),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 15,
-            vertical: 12,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
           child: Row(
             children: [
               _buildIconBox(icon, iconColor),
@@ -659,15 +649,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: color.withValues(alpha: 0.16),
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.16)),
       ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 21,
-      ),
+      child: Icon(icon, color: color, size: 21),
     );
   }
 
@@ -676,11 +660,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // --------------------------------------------------
 
   void _showGameModeDialog() {
-    final modes = [
-      'Normal Mode',
-      'Timed Challenge',
-      'Speed Run',
-    ];
+    final modes = ['Normal Mode', 'Timed Challenge', 'Speed Run'];
 
     showDialog<void>(
       context: context,
@@ -723,6 +703,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(17),
                   onTap: () async {
+                    SettingsStorage.playSystemTapSound();
                     VibrationService.tap();
 
                     await SettingsStorage.setDefaultGameMode(mode);
@@ -741,9 +722,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: selected
-                          ? modeColor.withValues(
-                        alpha: _isDark ? 0.16 : 0.09,
-                      )
+                          ? modeColor.withValues(alpha: _isDark ? 0.16 : 0.09)
                           : _dialogOptionColor,
                       borderRadius: BorderRadius.circular(17),
                       border: Border.all(
@@ -762,11 +741,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             color: modeColor.withValues(alpha: 0.13),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(
-                            modeIcon,
-                            color: modeColor,
-                            size: 20,
-                          ),
+                          child: Icon(modeIcon, color: modeColor, size: 20),
                         ),
 
                         const SizedBox(width: 12),
@@ -826,11 +801,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             shape: BoxShape.circle,
             color: _red.withValues(alpha: _isDark ? 0.18 : 0.10),
           ),
-          child: const Icon(
-            Icons.restart_alt_rounded,
-            color: _red,
-            size: 29,
-          ),
+          child: const Icon(Icons.restart_alt_rounded, color: _red, size: 29),
         ),
         title: Text(
           'Reset Progress?',
@@ -842,39 +813,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         content: Text(
           'This will reset all game modes to Level 1. '
-              'Your sound, vibration, and other settings will remain unchanged.',
+          'Your sound, vibration, and other settings will remain unchanged.',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: _muted,
-            height: 1.5,
-            fontSize: 13,
-          ),
+          style: TextStyle(color: _muted, height: 1.5, fontSize: 13),
         ),
         actionsAlignment: MainAxisAlignment.center,
         actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () {
+              SettingsStorage.playSystemTapSound();
+              Get.back();
+            },
             style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 22,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
             child: Text(
               'Cancel',
-              style: TextStyle(
-                color: _muted,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: _muted, fontWeight: FontWeight.w700),
             ),
           ),
 
           ElevatedButton(
             onPressed: () async {
+              SettingsStorage.playSystemTapSound();
               Get.back();
 
               try {
@@ -883,9 +848,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 } else {
                   await Future.wait([
                     GameStorage.clearProgress(GameMode.normal.name),
-                    GameStorage.clearProgress(
-                      GameMode.timedChallenge.name,
-                    ),
+                    GameStorage.clearProgress(GameMode.timedChallenge.name),
                     GameStorage.clearProgress(GameMode.speedRun.name),
                   ]);
                 }
@@ -905,10 +868,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               backgroundColor: _red,
               foregroundColor: Colors.white,
               elevation: 0,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 26,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -949,9 +909,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 class _SettingsMazePainter extends CustomPainter {
   final Color color;
 
-  const _SettingsMazePainter({
-    required this.color,
-  });
+  const _SettingsMazePainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -967,17 +925,9 @@ class _SettingsMazePainter extends CustomPainter {
     for (double y = 0; y < size.height; y += cell) {
       for (double x = 0; x < size.width; x += cell) {
         if (rnd.nextBool()) {
-          canvas.drawLine(
-            Offset(x, y),
-            Offset(x + cell, y),
-            paint,
-          );
+          canvas.drawLine(Offset(x, y), Offset(x + cell, y), paint);
         } else {
-          canvas.drawLine(
-            Offset(x, y),
-            Offset(x, y + cell),
-            paint,
-          );
+          canvas.drawLine(Offset(x, y), Offset(x, y + cell), paint);
         }
       }
     }

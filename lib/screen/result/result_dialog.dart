@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
+import '../../services/remote_config_service.dart';
 import '../../services/vibration_service.dart';
 
 class ResultDialog extends StatefulWidget {
@@ -29,7 +30,10 @@ class ResultDialog extends StatefulWidget {
   final VoidCallback onSecondary;
   final VoidCallback onHome;
   final VoidCallback? onWatchAd;
-  /// Called with 1.5 or 1.7 after the player taps a bonus button.
+
+  /// Called with the bonus multiplier (Remote Config: bonus_multiplier_low /
+  /// bonus_multiplier_high, defaults 1.2 and 1.5) after the player taps a
+  /// bonus button.
   final void Function(double multiplier)? onWatchAdBonus;
   final bool bonusClaimed;
   final String primaryLabel;
@@ -440,11 +444,19 @@ class _ResultDialogState extends State<ResultDialog>
       return _chip('Bonus claimed!', Icons.check_circle_rounded, _mint);
     }
 
+    // Multipliers come from Firebase Remote Config
+    // (bonus_multiplier_low = 1.2, bonus_multiplier_high = 1.5 by default).
+    final rc = RemoteConfigService.instance;
+
     return Row(
       spacing: 10,
       children: [
-        Expanded(child: _bonusButton(1.2, const [_mint, _blue])),
-        Expanded(child: _bonusButton(1.5, const [_violet, _blue])),
+        Expanded(
+          child: _bonusButton(rc.bonusMultiplierLow, const [_mint, _blue]),
+        ),
+        Expanded(
+          child: _bonusButton(rc.bonusMultiplierHigh, const [_violet, _blue]),
+        ),
       ],
     );
   }

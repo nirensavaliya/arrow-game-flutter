@@ -9,11 +9,42 @@ import '../model/arrow_model.dart';
 import '../modes/game_mode.dart';
 import '../modes/game_mode_config.dart';
 import '../screen/level/level_design.dart';
+import '../services/analytics_service.dart';
 import '../services/game_storage.dart';
+import '../services/remote_config_service.dart';
 import '../services/vibration_service.dart';
 
 class GameController extends GetxController {
+
+  // Firebase Analytics
+  void _track(
+      String event, {
+        Map<String, Object>? parameters,
+      }) {
+    unawaited(
+      AnalyticsService.instance.logEvent(
+        event,
+        parameters: parameters,
+      ),
+    );
+  }
+
+  void _trackLevelFailed(String reason) {
+    _track(
+      'level_failed',
+      parameters: {
+        'level': level.value,
+        'mode': selectedMode.value.name,
+        'reason': reason,
+      },
+    );
+  }
+
+
   static const double boardAspect = 0.82;
+
+  // Firebase Remote Config shortcut.
+  static RemoteConfigService get _rc => RemoteConfigService.instance;
 
   // Timed Challenge tuning.
   static const int _baseTimeSeconds = 15;
@@ -80,15 +111,17 @@ class GameController extends GetxController {
   // Changes the arrow layout on restart. The design stays the same.
   int _variant = 0;
 
-  // Hint system: no free hints, they are earned by watching rewarded ads.
-  static const int initialHints = 0;
-  static const int hintsPerAd = 1;
+  // Hint system: values come from Firebase Remote Config.
+  // Hints are earned by watching rewarded ads.
+  int get hintsPerAd => _rc.hintsPerAd;
 
-  // Seconds given by the "Watch Ad & Continue" button after time is up.
-  static const double adBonusSec = 0.5;
-  final bonusClaimed = false.obs; // x1.5 / x1.7 ad bonus already taken
+  // Ad coin bonus multipliers shown after a win (x1.2 / x1.5).
+  double get bonusMultiplierLow => _rc.bonusMultiplierLow;
+  double get bonusMultiplierHigh => _rc.bonusMultiplierHigh;
 
-  final hintsRemaining = initialHints.obs;
+  final bonusClaimed = false.obs; // x1.2 / x1.5 ad bonus already taken
+
+  final hintsRemaining = RemoteConfigService.instance.initialHints.obs;
   final Rxn<ArrowModel> hintArrow = Rxn<ArrowModel>();
 
   Timer? _hintTimer;
@@ -100,17 +133,21 @@ class GameController extends GetxController {
   bool _coinEligible = true; // false when this level already paid in this mode
   bool _rewardPaid = false;
 
+  /// Combo coin values come from Firebase Remote Config.
   static int comboCoinsFor(int streak) {
-    if (streak >= 10) return 5;
-    if (streak >= 7) return 4;
-    if (streak >= 5) return 3;
-    if (streak >= 4) return 2;
+    final rc = RemoteConfigService.instance;
+
+    if (streak >= 10) return rc.comboCoins10;
+    if (streak >= 7) return rc.comboCoins7;
+    if (streak >= 5) return rc.comboCoins5;
+    if (streak >= 4) return rc.comboCoins4;
     return 0; // combo 2 and 3 give no coins
   }
 
   /// Coins paid for clearing a level for the first time.
   ///
-  /// Starts at 5 coins and goes up by 2 every 5 levels:
+  /// Starts at reward_base coins and goes up by reward_step every 5 levels
+  /// (never above reward_max). Defaults: 5 + 2 every 5 levels, cap 40:
   ///   levels 1-4   -> 5
   ///   levels 5-9   -> 7
   ///   levels 10-14 -> 9
@@ -118,10 +155,12 @@ class GameController extends GetxController {
   ///   levels 90+   -> 40 (cap)
   ///
   /// Combo coins are added on top of this (see comboCoinsFor).
-  int _baseReward(int lvl) =>
-      (5 + (lvl ~/ 5) * 2) // 5 base + 2 for every completed block of 5 levels
-          .clamp(5, 40) // never below 5, never above 40
-          .toInt(); // clamp returns num, so convert back to int
+  int _baseReward(int lvl) {
+    final base = _rc.rewardBase;
+    final max = math.max(base, _rc.rewardMax);
+
+    return (base + (lvl ~/ 5) * _rc.rewardStep).clamp(base, max).toInt();
+  }
 
   /// Called by the screen when a combo streak finishes.
   /// Returns the coins granted (0 on a replayed level).
@@ -138,6 +177,15 @@ class GameController extends GetxController {
       coinBalance.value = GameStorage.totalCoins();
     } else {
       comboCoins.value += coins;
+      _track(
+        'coins_earned',
+        parameters: {
+          'amount': coins,
+          'source': 'combo_after_completion',
+          'level': level.value,
+          'mode': selectedMode.value.name,
+        },
+      );
     }
     return coins;
   }
@@ -145,6 +193,7 @@ class GameController extends GetxController {
   void _payLevelReward() {
     if (!_coinEligible || _rewardPaid) {
       earnedCoins.value = 0;
+
       coinBalance.value = GameStorage.totalCoins();
       return;
     }
@@ -153,6 +202,15 @@ class GameController extends GetxController {
 
     final total = _baseReward(level.value) + comboCoins.value;
     earnedCoins.value = total;
+    _track(
+      'coins_earned',
+      parameters: {
+        'amount': total,
+        'source': 'level_completion',
+        'level': level.value,
+        'mode': selectedMode.value.name,
+      },
+    );
 
     unawaited(
       GameStorage.claimLevelCoins(
@@ -230,6 +288,14 @@ class GameController extends GetxController {
 
     // Consume one hint and highlight the safe arrow.
     hintsRemaining.value--;
+    _track(
+      'hint_used',
+      parameters: {
+        'level': level.value,
+        'mode': selectedMode.value.name,
+        'remaining_hints': hintsRemaining.value,
+      },
+    );
     hintArrow.value = candidate;
 
     VibrationService.success();
@@ -249,10 +315,21 @@ class GameController extends GetxController {
     hintArrow.value = null;
   }
 
-  /// Called after the player earns a rewarded ad. Gives only 1 hint.
+  /// Called after the player earns a rewarded ad. Gives hintsPerAd hints
+  /// (Remote Config, default 1).
   void grantHintFromAd() {
-    hintsRemaining.value += hintsPerAd;
-    message.value = 'You got $hintsPerAd hint!';
+    final granted = hintsPerAd;
+
+    hintsRemaining.value += granted;
+    _track(
+      'rewarded_hint_granted',
+      parameters: {
+        'level': level.value,
+        'mode': selectedMode.value.name,
+        'hints': granted,
+      },
+    );
+    message.value = 'You got $granted hint!';
     VibrationService.success();
   }
 
@@ -318,7 +395,16 @@ class GameController extends GetxController {
 
   // Game mode and timer
   void startMode(GameMode mode) {
-    // Restore this mode's own saved progress instead of resetting to Level 1.
+    _track(
+      'game_mode_selected',
+      parameters: {
+        'mode': mode.name,
+      },
+    );
+    unawaited(
+      AnalyticsService.instance.setGameMode(mode.name),
+    );
+
     _restoreProgress(mode);
   }
 
@@ -443,6 +529,7 @@ class GameController extends GetxController {
     if (isGameOver.value) return;
 
     _stopTimer();
+    _trackLevelFailed('time_up');
 
     timeLeft.value = 0;
     isWon.value = false;
@@ -559,6 +646,14 @@ class GameController extends GetxController {
       totalTime.value = 0;
       timeLeft.value = 0;
     }
+    _track(
+      'level_started',
+      parameters: {
+        'level': level.value,
+        'mode': selectedMode.value.name,
+        'arrows': arrows.length,
+      },
+    );
   }
 
   void _startRun() {
@@ -796,12 +891,12 @@ class GameController extends GetxController {
 
   /// Arrows that sit on the exit ray of [path] (the arrows blocking it).
   Set<int> _blockersOf(
-    List<int> path,
-    int self,
-    Map<int, int> owner,
-    int cols,
-    int rows,
-  ) {
+      List<int> path,
+      int self,
+      Map<int, int> owner,
+      int cols,
+      int rows,
+      ) {
     final deps = <int>{};
 
     if (path.length < 2) return deps;
@@ -942,15 +1037,15 @@ class GameController extends GetxController {
 
     // Fewer singles, more multi-blocked arrows, narrow frontier.
     return (
-      free,
-      solvable,
-      maxDepth * 100000 +
-          totalDeps * 4 +
-          multi * multiWeight -
-          singles * 80 -
-          choices * 30 -
-          decoyPenalty -
-          taperPenalty,
+    free,
+    solvable,
+    maxDepth * 100000 +
+        totalDeps * 4 +
+        multi * multiWeight -
+        singles * 80 -
+        choices * 30 -
+        decoyPenalty -
+        taperPenalty,
     );
   }
 
@@ -1340,9 +1435,9 @@ class GameController extends GetxController {
     final dist = {
       for (final id in allowed)
         id:
-            math.sqrt(
-              math.pow(id % cols - cx, 2) + math.pow(id ~/ cols - cy, 2),
-            ) +
+        math.sqrt(
+          math.pow(id % cols - cx, 2) + math.pow(id ~/ cols - cy, 2),
+        ) +
             rng.nextDouble() * 1.5,
     };
 
@@ -1750,14 +1845,16 @@ class GameController extends GetxController {
           if (timeLeft.value <= 0) {
             _timeUp();
           } else if (wrongClicks.value >= modeConfig.maxWrongClicks) {
+            _trackLevelFailed('wrong_click_limit');
+
             isGameOver.value = true;
             message.value =
-                '${modeConfig.maxWrongClicks} wrong clicks! Game over.';
+            '${modeConfig.maxWrongClicks} wrong clicks! Game over.';
 
             _stopTimer();
           } else {
             message.value =
-                'Wrong clicks: ${wrongClicks.value}/'
+            'Wrong clicks: ${wrongClicks.value}/'
                 '${modeConfig.maxWrongClicks}';
           }
         }
@@ -1767,6 +1864,8 @@ class GameController extends GetxController {
         VibrationService.wrongMove();
 
         if (lives.value <= 0) {
+          _trackLevelFailed('out_of_lives');
+
           isGameOver.value = true;
           message.value = 'Game over! Restart and try again.';
           _stopTimer();
@@ -1925,6 +2024,16 @@ class GameController extends GetxController {
 
       if (arrows.isEmpty) {
         _stopTimer();
+        _track(
+          'level_completed',
+          parameters: {
+            'level': level.value,
+            'mode': selectedMode.value.name,
+            'moves': moves.value,
+            'stars': resultStars,
+            'wrong_clicks': wrongClicks.value,
+          },
+        );
 
         visibleDotCells.addAll(maskCells);
 
@@ -2050,6 +2159,13 @@ class GameController extends GetxController {
 
   // Level controls
   void restartLevel() {
+    _track(
+      'level_restarted',
+      parameters: {
+        'level': level.value,
+        'mode': selectedMode.value.name,
+      },
+    );
     if (isSpeedRun) {
       // Preserve the level where the player lost.
       _stopTimer();
@@ -2086,8 +2202,10 @@ class GameController extends GetxController {
 
   /// Continue the current level after the player earns a rewarded ad.
   /// Works in every mode:
-  ///  - Normal: restores 2 hearts.
-  ///  - Timed Challenge / Speed Run, time up: adds [adBonusSeconds].
+  ///  - Normal: restores continue_lives hearts (Remote Config, default 2).
+  ///  - Timed Challenge / Speed Run, time up: gives back a fraction of the
+  ///    FULL timer (Remote Config ad_continue_time_fraction, default 0.5 =
+  ///    half of the full time).
   ///  - Timed Challenge / Speed Run, wrong-click limit: resets wrong clicks.
   void continueAfterRewardedAd() {
     // Only revive a game that has actually ended.
@@ -2126,8 +2244,11 @@ class GameController extends GetxController {
       wrongClicks.value = 0;
 
       if (wasTimeUp) {
-        // Half of the full timer (at least 1 second).
-        final bonus = math.max(1, (totalTime.value * adBonusSec).round());
+        // Fraction of the FULL timer (default half), at least 1 second.
+        final bonus = math.max(
+          1,
+          (totalTime.value * _rc.adContinueTimeFraction).round(),
+        );
 
         timeLeft.value = bonus;
         message.value = 'Continue playing! +$bonus seconds.';
@@ -2137,12 +2258,22 @@ class GameController extends GetxController {
 
       _startTimer();
     } else {
-      lives.value = 2;
-      message.value = 'Continue playing! 2 hearts restored.';
+      final restored = math.max(1, _rc.continueLives);
+
+      lives.value = restored;
+      message.value = 'Continue playing! $restored hearts restored.';
     }
 
     // Keep the current board; do not call loadLevel().
     VibrationService.success();
+    _track(
+      'rewarded_ad_continue',
+      parameters: {
+        'level': level.value,
+        'mode': selectedMode.value.name,
+        'continue_type': timedMode ? 'timed' : 'lives',
+      },
+    );
   }
 
   /// Extra coins a multiplier would add on top of the current reward.
@@ -2159,6 +2290,15 @@ class GameController extends GetxController {
 
     bonusClaimed.value = true;
     earnedCoins.value += extra;
+    _track(
+      'bonus_coins_claimed',
+      parameters: {
+        'amount': extra,
+        'multiplier': multiplier,
+        'level': level.value,
+        'mode': selectedMode.value.name,
+      },
+    );
     unawaited(GameStorage.addCoins(extra));
     coinBalance.value = GameStorage.totalCoins();
     VibrationService.success();

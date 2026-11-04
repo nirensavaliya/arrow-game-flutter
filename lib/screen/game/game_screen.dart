@@ -11,8 +11,10 @@ import '../../painter/animated_dot_grid.dart';
 import '../../painter/grid_lines_painter.dart';
 import '../../painter/arrow_Painter.dart';
 import '../../services/game_storage.dart';
+import '../../services/settings_storage.dart';
 import '../../services/ads/interstitial_ad_service.dart';
 import '../../services/ads/rewarded_ad_service.dart';
+import '../../services/remote_config_service.dart';
 import '../../services/vibration_service.dart';
 import '../level/level_design.dart';
 import '../result/result_dialog.dart';
@@ -104,8 +106,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late final RewardedAdService _rewardedAdService;
   late final InterstitialAdService _interstitialAdService;
 
-  // Show an interstitial after every 3rd level (3, 6, 9, ...).
-  static const int _adEveryLevels = 5;
+  // Show an interstitial every N levels (N comes from Firebase Remote Config,
+  // key: interstitial_every_levels, default 5).
+  int get _adEveryLevels =>
+      math.max(1, RemoteConfigService.instance.interstitialEveryLevels);
 
   Worker? _livesWorker;
   int _prevLives = -1;
@@ -149,20 +153,20 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late bool _showGrid = GameStorage.loadShowGrid();
 
   Animation<double> _interval(
-    double a,
-    double b, [
-    Curve c = Curves.easeOutCubic,
-  ]) => CurvedAnimation(
+      double a,
+      double b, [
+        Curve c = Curves.easeOutCubic,
+      ]) => CurvedAnimation(
     parent: _entranceController,
     curve: Interval(a, b, curve: c),
   );
 
   Widget _enter(
-    Animation<double> a,
-    Widget child, {
-    double dy = 18,
-    double scale = 1,
-  }) {
+      Animation<double> a,
+      Widget child, {
+        double dy = 18,
+        double scale = 1,
+      }) {
     return AnimatedBuilder(
       animation: a,
       child: child,
@@ -414,8 +418,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       _playEntrance();
     }
 
-    // Ad after levels 3, 6, 9, 12, ... (never after level 1).
-    if (finished % _adEveryLevels == 0) {
+    // Ad every N levels (N from Remote Config), only when ads are enabled
+    // (never after level 1 unless N is 1).
+    if (RemoteConfigService.instance.adsEnabled &&
+        finished % _adEveryLevels == 0) {
       _interstitialAdService.show(onDone: proceed);
     } else {
       proceed();
@@ -423,7 +429,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   void _restartLevel(GameController c) {
-    VibrationService.tap();
+    _tapFeedback();
     _resetZoom();
     _resetCombo();
     _prevArrows = -1; // level reload is not a clear
@@ -439,12 +445,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   void _handleBoardTap(
-    GameController c,
-    Offset position, {
-    required bool won,
-    required bool over,
-  }) {
+      GameController c,
+      Offset position, {
+        required bool won,
+        required bool over,
+      }) {
     if (won || over) return;
+
+    SettingsStorage.playSystemTapSound();
 
     final before = c.arrows.length;
     _pendingTapTime = DateTime.now();
@@ -463,6 +471,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
     // Has a hint: use it. No hints: show the rewarded ad straight away.
     if (c.hintsRemaining.value > 0) {
+      _tapFeedback();
       c.showHint();
       _showPop(
         icon: Icons.lightbulb_rounded,
@@ -475,8 +484,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _exit(GameController c) {
+  // Tap sound (respects the "System Tap Sound" setting) + vibration.
+  void _tapFeedback() {
+    SettingsStorage.playSystemTapSound();
     VibrationService.tap();
+  }
+
+  void _exit(GameController c) {
+    _tapFeedback();
     c.pauseTimer();
 
     Get.back();
@@ -501,7 +516,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   void _zoomBy(double factor) {
     if (_boardSize.isEmpty) return;
-    VibrationService.tap();
+    _tapFeedback();
 
     final current = _tc.value.getMaxScaleOnAxis();
     final target = (current * factor).clamp(_minZoom, _maxZoom).toDouble();
@@ -552,7 +567,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   void _toggleGrid() {
-    VibrationService.tap();
+    _tapFeedback();
     final next = !_showGrid;
     setState(() => _showGrid = next);
     GameStorage.saveShowGrid(next);
@@ -561,7 +576,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void _watchRewardedAd(GameController c) {
     if (!mounted || !c.isGameOver.value || c.isWon.value) return;
 
-    VibrationService.tap();
+    _tapFeedback();
 
     _rewardedAdService.showAd(
       onRewardEarned: () {
@@ -592,12 +607,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       if (pausedByAd && mounted) c.resumeGame();
     }
 
-    VibrationService.tap();
+    _tapFeedback();
 
     _rewardedAdService.showAd(
       onRewardEarned: () {
         if (!mounted) return;
-        c.grantHintFromAd(); // +1 hint only
+        c.grantHintFromAd(); // + hintsPerAd hints (Remote Config)
         resumeIfNeeded();
       },
       onUnavailable: () {
@@ -617,7 +632,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void _watchAdForBonus(GameController c, double multiplier) {
     if (!mounted || !c.isWon.value || c.bonusClaimed.value) return;
 
-    VibrationService.tap();
+    _tapFeedback();
 
     _rewardedAdService.showAd(
       onRewardEarned: () {
@@ -793,14 +808,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 child: _pop == null
                     ? const SizedBox.shrink()
                     : _ActionToast(
-                        key: ValueKey(_pop!.id),
-                        pop: _pop!,
-                        onDone: () {
-                          if (mounted && _pop != null) {
-                            setState(() => _pop = null);
-                          }
-                        },
-                      ),
+                  key: ValueKey(_pop!.id),
+                  pop: _pop!,
+                  onDone: () {
+                    if (mounted && _pop != null) {
+                      setState(() => _pop = null);
+                    }
+                  },
+                ),
               ),
             ),
           ),
@@ -817,14 +832,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   child: _comboMsg == null
                       ? const SizedBox.shrink()
                       : _ComboBanner(
-                          key: ValueKey(_comboMsg!.id),
-                          msg: _comboMsg!,
-                          onDone: () {
-                            if (mounted && _comboMsg != null) {
-                              setState(() => _comboMsg = null);
-                            }
-                          },
-                        ),
+                    key: ValueKey(_comboMsg!.id),
+                    msg: _comboMsg!,
+                    onDone: () {
+                      if (mounted && _comboMsg != null) {
+                        setState(() => _comboMsg = null);
+                      }
+                    },
+                  ),
                 ),
               ),
             ),
@@ -838,14 +853,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 child: _coinBurst == null
                     ? const SizedBox.shrink()
                     : _CoinBurst(
-                        key: ValueKey(_coinBurst!.id),
-                        data: _coinBurst!,
-                        onDone: () {
-                          if (mounted && _coinBurst != null) {
-                            setState(() => _coinBurst = null);
-                          }
-                        },
-                      ),
+                  key: ValueKey(_coinBurst!.id),
+                  data: _coinBurst!,
+                  onDone: () {
+                    if (mounted && _coinBurst != null) {
+                      setState(() => _coinBurst = null);
+                    }
+                  },
+                ),
               ),
             ),
           ),
@@ -1277,7 +1292,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       glass: _glass,
                       border: _glassBorder,
                       size: 40,
-                      onTap: c.togglePause,
+                      onTap: () {
+                        _tapFeedback();
+                        c.togglePause();
+                      },
                     );
                   }),
                 ],
@@ -1350,11 +1368,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           border: Border.all(color: color.withValues(alpha: 0.30)),
           boxShadow: urgent
               ? [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.35),
-                    blurRadius: 14,
-                  ),
-                ]
+            BoxShadow(
+              color: color.withValues(alpha: 0.35),
+              blurRadius: 14,
+            ),
+          ]
               : null,
         ),
         child: Row(
@@ -1488,7 +1506,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
                   // Safety net: catches clears even if the list worker misses.
                   WidgetsBinding.instance.addPostFrameCallback(
-                    (_) => _syncArrows(c),
+                        (_) => _syncArrows(c),
                   );
 
                   return GestureDetector(
@@ -1760,31 +1778,31 @@ class _ActionToastState extends State<_ActionToast>
       child: Center(
         child: emoji != null
             ? AnimatedBuilder(
-                animation: _c,
-                builder: (_, child) {
-                  return Transform.translate(
-                    offset: Offset(0, _emojiSlide.value),
-                    child: Transform.scale(
-                      scale: _emojiScale.value,
-                      child: child,
-                    ),
-                  );
-                },
-                child: Text(
-                  emoji,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: size,
-                    height: 1.0,
-                    decoration: TextDecoration.none,
-                  ),
-                  textHeightBehavior: const TextHeightBehavior(
-                    applyHeightToFirstAscent: false,
-                    applyHeightToLastDescent: false,
-                  ),
-                ),
-              )
-            // No emoji: use the pop's own colour, not the default white icon.
+          animation: _c,
+          builder: (_, child) {
+            return Transform.translate(
+              offset: Offset(0, _emojiSlide.value),
+              child: Transform.scale(
+                scale: _emojiScale.value,
+                child: child,
+              ),
+            );
+          },
+          child: Text(
+            emoji,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: size,
+              height: 1.0,
+              decoration: TextDecoration.none,
+            ),
+            textHeightBehavior: const TextHeightBehavior(
+              applyHeightToFirstAscent: false,
+              applyHeightToLastDescent: false,
+            ),
+          ),
+        )
+        // No emoji: use the pop's own colour, not the default white icon.
             : Icon(p.icon, size: size, color: p.color),
       ),
     );
@@ -1831,11 +1849,11 @@ class _ActionToastState extends State<_ActionToast>
   }
 
   Widget _compactBody(
-    _ActionPop p,
-    double box,
-    double iconSize,
-    double bigSize,
-  ) {
+      _ActionPop p,
+      double box,
+      double iconSize,
+      double bigSize,
+      ) {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 8, 18, 8),
       decoration: BoxDecoration(
@@ -2624,12 +2642,12 @@ class _DockButtonState extends State<_DockButton> {
                     ),
                     boxShadow: widget.active
                         ? [
-                            BoxShadow(
-                              color: widget.color.withValues(alpha: 0.30),
-                              blurRadius: 14,
-                              offset: const Offset(0, 5),
-                            ),
-                          ]
+                      BoxShadow(
+                        color: widget.color.withValues(alpha: 0.30),
+                        blurRadius: 14,
+                        offset: const Offset(0, 5),
+                      ),
+                    ]
                         : null,
                   ),
                   child: Center(

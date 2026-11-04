@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "115011347452",
+    "project_id": "arrow-game-1a196",
+    "storage_bucket": "arrow-game-1a196.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:115011347452:android:2371e6d0eeaa5a5e9bc879",
+        "android_client_info": {
+          "package_name": "com.app.arrow.escape"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0S_KLrbQd8fDMw5GkuJEh02vXm5dYLwY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
