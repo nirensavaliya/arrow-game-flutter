@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../services/settings_storage.dart';
+import '../storage/settings_storage.dart';
 
 class ThemeController extends GetxController {
   final RxBool isDarkMode = false.obs;

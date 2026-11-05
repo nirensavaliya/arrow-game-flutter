@@ -7,7 +7,7 @@ import 'package:get/get.dart';
 
 import 'level_design.dart';
 import '../game/game_screen.dart';
-import '../../services/game_storage.dart';
+import '../../storage/game_storage.dart';
 
 class LevelScreen extends StatefulWidget {
   const LevelScreen({super.key});

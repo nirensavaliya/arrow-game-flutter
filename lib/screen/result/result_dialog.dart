@@ -7,11 +7,7 @@ import '../../services/vibration_service.dart';
 
 class ResultDialog extends StatefulWidget {
   final bool won;
-
-  /// True when the player lost because the timer ran out (timer mode).
   final bool timeUp;
-
-  /// True when the player lost by hitting the wrong-move limit.
   final bool limitReached;
 
   final int stars;
@@ -19,10 +15,7 @@ class ResultDialog extends StatefulWidget {
   final String message;
   final String? timeText;
 
-  /// Coins earned by completing this level for the first time.
   final int earnedCoins;
-
-  /// Current shared coin balance.
   final int coinBalance;
 
   final bool newBest;
@@ -31,9 +24,6 @@ class ResultDialog extends StatefulWidget {
   final VoidCallback onHome;
   final VoidCallback? onWatchAd;
 
-  /// Called with the bonus multiplier (Remote Config: bonus_multiplier_low /
-  /// bonus_multiplier_high, defaults 1.2 and 1.5) after the player taps a
-  /// bonus button.
   final void Function(double multiplier)? onWatchAdBonus;
   final bool bonusClaimed;
   final String primaryLabel;
@@ -67,7 +57,6 @@ class ResultDialog extends StatefulWidget {
 
 class _ResultDialogState extends State<ResultDialog>
     with TickerProviderStateMixin {
-  // Same palette as GameScreen.
   static const _blue = Color(0xFF2F80FF);
   static const _violet = Color(0xFF7B61FF);
   static const _red = Color(0xFFFF4D5E);
@@ -84,6 +73,9 @@ class _ResultDialogState extends State<ResultDialog>
   late final List<_Shot> _shots;
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
+  // Remote Config protection for all rewarded-ad UI.
+  bool get _adsEnabled => RemoteConfigService.instance.adsEnabled;
 
   bool get _isTimeUp => widget.timeUp && !widget.won;
 
@@ -241,7 +233,6 @@ class _ResultDialogState extends State<ResultDialog>
 
     return Stack(
       children: [
-        // Blurred dim backdrop.
         Positioned.fill(
           child: FadeTransition(
             opacity: backdrop,
@@ -257,7 +248,6 @@ class _ResultDialogState extends State<ResultDialog>
             ),
           ),
         ),
-
         Center(
           child: AnimatedBuilder(
             animation: _c,
@@ -275,7 +265,6 @@ class _ResultDialogState extends State<ResultDialog>
             child: _card(title, message, primary, secondary),
           ),
         ),
-
         if (won)
           Positioned.fill(
             child: IgnorePointer(
@@ -332,9 +321,7 @@ class _ResultDialogState extends State<ResultDialog>
                                   ? _timeUpIcon(icon: Icons.block_rounded)
                                   : _brokenHeart())),
                 ),
-
                 const SizedBox(height: 12),
-
                 ShaderMask(
                   shaderCallback: (r) =>
                       LinearGradient(colors: accent).createShader(r),
@@ -349,9 +336,7 @@ class _ResultDialogState extends State<ResultDialog>
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
                 Text(
                   message,
                   textAlign: TextAlign.center,
@@ -362,12 +347,10 @@ class _ResultDialogState extends State<ResultDialog>
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-
                 if (won && widget.timeText != null) ...[
                   const SizedBox(height: 14),
                   _chip(widget.timeText!, Icons.schedule_rounded, _blue),
                 ],
-
                 if (won && widget.newBest) ...[
                   const SizedBox(height: 8),
                   FadeTransition(
@@ -384,14 +367,15 @@ class _ResultDialogState extends State<ResultDialog>
                 if (won && widget.earnedCoins > 0) ...[
                   const SizedBox(height: 14),
                   _coinReward(),
-                  if (widget.onWatchAdBonus != null) ...[
+
+                  // Only show bonus ad options when Remote Config allows ads.
+                  if (_adsEnabled && widget.onWatchAdBonus != null) ...[
                     const SizedBox(height: 10),
                     _bonusRow(),
                   ],
                 ],
 
                 const SizedBox(height: 20),
-
                 Row(
                   spacing: 10,
                   children: [
@@ -417,7 +401,8 @@ class _ResultDialogState extends State<ResultDialog>
                   ],
                 ),
 
-                if (!won && widget.onWatchAd != null) ...[
+                // Only show rewarded continue when ads are enabled.
+                if (!won && _adsEnabled && widget.onWatchAd != null) ...[
                   const SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
@@ -440,12 +425,15 @@ class _ResultDialogState extends State<ResultDialog>
   }
 
   Widget _bonusRow() {
+    // Extra safety: never show bonus ad options when ads are disabled.
+    if (!_adsEnabled || widget.onWatchAdBonus == null) {
+      return const SizedBox.shrink();
+    }
+
     if (widget.bonusClaimed) {
       return _chip('Bonus claimed!', Icons.check_circle_rounded, _mint);
     }
 
-    // Multipliers come from Firebase Remote Config
-    // (bonus_multiplier_low = 1.2, bonus_multiplier_high = 1.5 by default).
     final rc = RemoteConfigService.instance;
 
     return Row(
@@ -462,18 +450,20 @@ class _ResultDialogState extends State<ResultDialog>
   }
 
   Widget _bonusButton(double m, List<Color> colors) {
-    // Preview of the extra coins this option gives.
     final extra = (widget.earnedCoins * m).round() - widget.earnedCoins;
 
     return _GradientButton(
       label: 'x$m  +$extra',
       icon: Icons.play_circle_rounded,
       colors: colors,
-      onTap: () => widget.onWatchAdBonus!(m),
+      onTap: () {
+        if (_adsEnabled && widget.onWatchAdBonus != null) {
+          widget.onWatchAdBonus!(m);
+        }
+      },
     );
   }
 
-  // Animated reward panel.
   Widget _coinReward() {
     final animation = _iv(0.55, 1.0, Curves.easeOutBack);
 
@@ -524,9 +514,7 @@ class _ResultDialogState extends State<ResultDialog>
                 size: 30,
               ),
             ),
-
             const SizedBox(width: 10),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -554,9 +542,7 @@ class _ResultDialogState extends State<ResultDialog>
                 ],
               ),
             ),
-
             const SizedBox(width: 6),
-
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -923,7 +909,6 @@ class _ConfettiPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Firecracker burst.
     if (elapsed < _burstLife + 0.4) {
       for (final p in shots) {
         final s = elapsed - p.delay;
@@ -954,7 +939,6 @@ class _ConfettiPainter extends CustomPainter {
       }
     }
 
-    // Continuous falling ribbons.
     final f = elapsed - _fallStart;
 
     if (f > 0) {

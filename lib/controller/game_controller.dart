@@ -10,22 +10,15 @@ import '../modes/game_mode.dart';
 import '../modes/game_mode_config.dart';
 import '../screen/level/level_design.dart';
 import '../services/analytics_service.dart';
-import '../services/game_storage.dart';
+import '../storage/game_storage.dart';
 import '../services/remote_config_service.dart';
 import '../services/vibration_service.dart';
 
 class GameController extends GetxController {
-
   // Firebase Analytics
-  void _track(
-      String event, {
-        Map<String, Object>? parameters,
-      }) {
+  void _track(String event, {Map<String, Object>? parameters}) {
     unawaited(
-      AnalyticsService.instance.logEvent(
-        event,
-        parameters: parameters,
-      ),
+      AnalyticsService.instance.logEvent(event, parameters: parameters),
     );
   }
 
@@ -40,11 +33,34 @@ class GameController extends GetxController {
     );
   }
 
-
   static const double boardAspect = 0.82;
 
   // Firebase Remote Config shortcut.
   static RemoteConfigService get _rc => RemoteConfigService.instance;
+
+  // ==================== AD MANAGEMENT ====================
+  // Ad unit selection stays inside AdConfig. Ad loading/display/disposal
+  // stays inside InterstitialAdService and RewardedAdService. These getters
+  // expose the current Remote Config policy to screens and ad-related UI.
+
+  /// Master switch for every ad placement in the game.
+  bool get adsEnabled => _rc.adsEnabled;
+
+  /// Debug behavior flag from Firebase Remote Config.
+  /// AdConfig also applies kDebugMode as a hard safety net for ad IDs.
+  bool get isDebug => _rc.isDebug;
+
+  /// Release/monetization flag from Firebase Remote Config.
+  /// Real IDs are selected only when isDebug is false.
+  bool get isRelease => _rc.isRelease;
+
+  /// Use this before presenting any ad-related UI. The ad services must also
+  /// check adsEnabled immediately before loading and showing an ad.
+  bool get canShowAds => adsEnabled;
+
+  /// Number of completed levels between interstitial opportunities.
+  /// A value of 0 disables interstitial scheduling.
+  int get interstitialEveryLevels => _rc.interstitialEveryLevels;
 
   // Timed Challenge tuning.
   static const int _baseTimeSeconds = 15;
@@ -117,6 +133,7 @@ class GameController extends GetxController {
 
   // Ad coin bonus multipliers shown after a win (x1.2 / x1.5).
   double get bonusMultiplierLow => _rc.bonusMultiplierLow;
+
   double get bonusMultiplierHigh => _rc.bonusMultiplierHigh;
 
   final bonusClaimed = false.obs; // x1.2 / x1.5 ad bonus already taken
@@ -318,7 +335,12 @@ class GameController extends GetxController {
   /// Called after the player earns a rewarded ad. Gives hintsPerAd hints
   /// (Remote Config, default 1).
   void grantHintFromAd() {
+    // A rewarded callback must not grant anything if ads were disabled
+    // remotely while the ad was loading or being shown.
+    if (!adsEnabled) return;
+
     final granted = hintsPerAd;
+    if (granted <= 0) return;
 
     hintsRemaining.value += granted;
     _track(
@@ -395,15 +417,8 @@ class GameController extends GetxController {
 
   // Game mode and timer
   void startMode(GameMode mode) {
-    _track(
-      'game_mode_selected',
-      parameters: {
-        'mode': mode.name,
-      },
-    );
-    unawaited(
-      AnalyticsService.instance.setGameMode(mode.name),
-    );
+    _track('game_mode_selected', parameters: {'mode': mode.name});
+    unawaited(AnalyticsService.instance.setGameMode(mode.name));
 
     _restoreProgress(mode);
   }
@@ -891,12 +906,12 @@ class GameController extends GetxController {
 
   /// Arrows that sit on the exit ray of [path] (the arrows blocking it).
   Set<int> _blockersOf(
-      List<int> path,
-      int self,
-      Map<int, int> owner,
-      int cols,
-      int rows,
-      ) {
+    List<int> path,
+    int self,
+    Map<int, int> owner,
+    int cols,
+    int rows,
+  ) {
     final deps = <int>{};
 
     if (path.length < 2) return deps;
@@ -1037,15 +1052,15 @@ class GameController extends GetxController {
 
     // Fewer singles, more multi-blocked arrows, narrow frontier.
     return (
-    free,
-    solvable,
-    maxDepth * 100000 +
-        totalDeps * 4 +
-        multi * multiWeight -
-        singles * 80 -
-        choices * 30 -
-        decoyPenalty -
-        taperPenalty,
+      free,
+      solvable,
+      maxDepth * 100000 +
+          totalDeps * 4 +
+          multi * multiWeight -
+          singles * 80 -
+          choices * 30 -
+          decoyPenalty -
+          taperPenalty,
     );
   }
 
@@ -1435,9 +1450,9 @@ class GameController extends GetxController {
     final dist = {
       for (final id in allowed)
         id:
-        math.sqrt(
-          math.pow(id % cols - cx, 2) + math.pow(id ~/ cols - cy, 2),
-        ) +
+            math.sqrt(
+              math.pow(id % cols - cx, 2) + math.pow(id ~/ cols - cy, 2),
+            ) +
             rng.nextDouble() * 1.5,
     };
 
@@ -1849,12 +1864,12 @@ class GameController extends GetxController {
 
             isGameOver.value = true;
             message.value =
-            '${modeConfig.maxWrongClicks} wrong clicks! Game over.';
+                '${modeConfig.maxWrongClicks} wrong clicks! Game over.';
 
             _stopTimer();
           } else {
             message.value =
-            'Wrong clicks: ${wrongClicks.value}/'
+                'Wrong clicks: ${wrongClicks.value}/'
                 '${modeConfig.maxWrongClicks}';
           }
         }
@@ -2161,10 +2176,7 @@ class GameController extends GetxController {
   void restartLevel() {
     _track(
       'level_restarted',
-      parameters: {
-        'level': level.value,
-        'mode': selectedMode.value.name,
-      },
+      parameters: {'level': level.value, 'mode': selectedMode.value.name},
     );
     if (isSpeedRun) {
       // Preserve the level where the player lost.
@@ -2208,6 +2220,9 @@ class GameController extends GetxController {
   ///    half of the full time).
   ///  - Timed Challenge / Speed Run, wrong-click limit: resets wrong clicks.
   void continueAfterRewardedAd() {
+    // Do not grant a continue if ads were disabled remotely.
+    if (!adsEnabled) return;
+
     // Only revive a game that has actually ended.
     if (!isGameOver.value || isWon.value) return;
 
@@ -2282,6 +2297,9 @@ class GameController extends GetxController {
 
   /// Called after the rewarded ad finishes. One claim per win.
   void claimBonusCoins(double multiplier) {
+    // Do not grant ad-multiplier coins if ads were disabled remotely.
+    if (!adsEnabled) return;
+
     if (!isWon.value || !_rewardPaid || bonusClaimed.value) return;
     if (earnedCoins.value <= 0) return;
 

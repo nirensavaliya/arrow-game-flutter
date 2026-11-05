@@ -6,8 +6,8 @@ import 'package:get/get.dart';
 import '../../controller/game_controller.dart';
 import '../../modes/game_mode.dart';
 import '../../modes/game_mode_config.dart';
-import '../../services/game_storage.dart';
-import '../../services/settings_storage.dart';
+import '../../storage/game_storage.dart';
+import '../../storage/settings_storage.dart';
 import '../../services/vibration_service.dart';
 import '../level/level_design.dart';
 import '../level/level_screen.dart';
@@ -1118,8 +1118,23 @@ class _GameIntroScreenState extends State<GameIntroScreen>
   // --------------------------------------------------
 
   Widget _buildBottomBar(_GameMode mode) {
+    final progress = _progressFor(_selectedGameMode);
+
+    // Check whether the selected mode has been played before.
+    final bool hasPlayed = progress.clearedLevels > 0 ||
+        progress.currentLevel > 1;
+
+    // Dynamic button title and icon.
+    final String buttonLabel = hasPlayed
+        ? 'Continue Level ${progress.currentLevel}'
+        : mode.cta;
+
+    final IconData buttonIcon = hasPlayed
+        ? Icons.play_circle_outline_rounded
+        : mode.ctaIcon;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+      padding: const EdgeInsets.fromLTRB(15, 15, 15, 10),
       decoration: BoxDecoration(
         color: _bg.withValues(alpha: _isDark ? 0.94 : 0.96),
         border: Border(top: BorderSide(color: _hairline)),
@@ -1144,7 +1159,9 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: mode.color.withValues(alpha: _isDark ? 0.40 : 0.30),
+                    color: mode.color.withValues(
+                      alpha: _isDark ? 0.40 : 0.30,
+                    ),
                     blurRadius: 24,
                     offset: const Offset(0, 9),
                   ),
@@ -1162,32 +1179,25 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                   ),
                 ),
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
+                  duration: const Duration(milliseconds: 250),
                   child: Row(
-                    key: ValueKey(_selectedMode),
+                    key: ValueKey(
+                      '$_selectedMode-$buttonLabel',
+                    ),
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(mode.ctaIcon, size: 22),
-                      const SizedBox(width: 9),
-                      Text(
-                        mode.cta,
-                        style: const TextStyle(
-                          fontSize: 16.5,
-                          letterSpacing: -0.2,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 26,
-                        height: 26,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.22),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 16,
+                      Icon(buttonIcon, size: 22),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          buttonLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16.5,
+                            letterSpacing: -0.2,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
                     ],

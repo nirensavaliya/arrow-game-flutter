@@ -4,9 +4,11 @@ import 'package:arrow/constants/app_colors.dart';
 import 'package:arrow/controller/game_controller.dart';
 import 'package:arrow/controller/theme_controller.dart';
 import 'package:arrow/screen/splash/splash_screen.dart';
+import 'package:arrow/services/ads/ad_config.dart';
 import 'package:arrow/services/analytics_service.dart';
 import 'package:arrow/services/remote_config_service.dart';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -25,7 +27,9 @@ Future<void> main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Initialize Crashlytics
-  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+    !kDebugMode,
+  );
 
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
@@ -35,18 +39,27 @@ Future<void> main() async {
   };
 
   // Initialize Firebase Analytics
-  await AnalyticsService.instance.setAnalyticsEnabled(true);
+  await AnalyticsService.instance.setAnalyticsEnabled(!kDebugMode);
 
-  // Initialize Firebase Remote Config (defaults + settings + fetch).
+  // Initialize Firebase Remote Config
   // Must run before GameController is created.
   try {
     await RemoteConfigService.instance.initialize();
-  } catch (e) {
+    AdConfig.printAdConfiguration();
+  } catch (e, stack) {
     debugPrint('Remote Config initialization error: $e');
+
+    await FirebaseCrashlytics.instance.recordError(
+      e,
+      stack,
+      reason: 'Remote Config initialization failed',
+    );
   }
 
   // Initialize Google Mobile Ads
-  await MobileAds.instance.initialize();
+  if (RemoteConfigService.instance.adsEnabled) {
+    await MobileAds.instance.initialize();
+  }
 
   // Initialize GetStorage
   await GetStorage.init();

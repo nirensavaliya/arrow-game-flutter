@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 
-import 'settings_storage.dart';
+import '../storage/settings_storage.dart';
 
 class VibrationService {
   VibrationService._();

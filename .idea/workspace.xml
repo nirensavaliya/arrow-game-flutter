@@ -5,25 +5,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="297eef14-14cb-4358-9b3b-507a3f7983eb" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.dart_tool/package_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.dart_tool/package_graph.json" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_graph.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/.flutter-plugins-dependencies" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/android/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/settings.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ios/Runner.xcodeproj/project.pbxproj" beforeDir="false" afterPath="$PROJECT_DIR$/ios/Runner.xcodeproj/project.pbxproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved" beforeDir="false" afterPath="$PROJECT_DIR$/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved" beforeDir="false" afterPath="$PROJECT_DIR$/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/controller/game_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/controller/game_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/controller/theme_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/controller/theme_controller.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screen/game/game_intro_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen/game/game_intro_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screen/game/game_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen/game/game_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screen/level/level_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen/level/level_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screen/result/result_dialog.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen/result/result_dialog.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screen/settings/settings_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen/settings/settings_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/services/settings_storage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/settings_storage.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/ads/ad_config.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/ads/ad_config.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/ads/interstitial_ad_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/ads/interstitial_ad_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/ads/rewarded_ad_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/ads/rewarded_ad_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/game_storage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/storage/game_storage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/remote_config_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/remote_config_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/settings_storage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/storage/settings_storage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/vibration_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/vibration_service.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -72,7 +71,7 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
-    &quot;Flutter.main.dart.executor&quot;: &quot;Debug&quot;,
+    &quot;Flutter.main.dart.executor&quot;: &quot;Run&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
@@ -99,16 +98,11 @@
       <recent name="$PROJECT_DIR$/android/app" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/lib/storage" />
       <recent name="$PROJECT_DIR$/lib/services" />
     </key>
   </component>
   <component name="RunManager">
-    <configuration default="true" type="AppleRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" IS_LOCATION_SIMULATION_SUPPORTED="false" IS_LOCATION_SIMULATION_ALLOWED="true" APPLICATION_LANGUAGE="IDELaunchSchemeLanguageUseSystemLanguage" APPLICATION_REGION="" DEVELOPMENT_TEAM="" MAKE_ACTIVE="TRUE" SHOULD_DEBUG_EXTENSIONS="false">
-      <embedded_app_extension_list />
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
     <configuration name="main.dart" type="FlutterRunConfigurationType" factoryName="Flutter">
       <option name="filePath" value="$PROJECT_DIR$/lib/main.dart" />
       <method v="2" />

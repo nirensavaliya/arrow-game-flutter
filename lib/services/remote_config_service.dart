@@ -18,13 +18,26 @@ class RemoteConfigService {
   bool get isInitialized => _initialized;
 
   static const Map<String, dynamic> _defaults = <String, dynamic>{
-    // Hints / Ads
+    // ==================== AD CONTROL (3 separate parameters) ====================
+
+    /// Master switch: false = no ads shown at all.
+    'ads_enabled': false,
+
+    /// true = use REAL ad unit IDs (monetized).
+    /// false = use TEST ad unit IDs.
+    'is_release': false,
+
+    /// true = app behaves like debug mode
+    ///        (test ads, extra logging, debug UI, etc.)
+    /// false = normal behavior.
+    'is_debug': false,
+
+    // ==================== Hints / Ads ====================
     'initial_hints': 0,
     'hints_per_ad': 1,
     'interstitial_every_levels': 5,
-    'ads_enabled': true,
 
-    // Coins
+    // ==================== Coins ====================
     'reward_base': 5,
     'reward_step': 2,
     'reward_max': 40,
@@ -33,14 +46,12 @@ class RemoteConfigService {
     'combo_coins_7': 4,
     'combo_coins_10': 5,
 
-    // Watch ad after winning: coin bonus multipliers (x1.2 and x1.5)
+    // ==================== Ad bonus multipliers ====================
     'bonus_multiplier_low': 1.2,
     'bonus_multiplier_high': 1.5,
 
-    // Rewarded Ad - Continue
+    // ==================== Rewarded Ad - Continue ====================
     'continue_lives': 2,
-    // Fraction of the FULL timer given back after "Watch Ad & Continue".
-    // 0.5 = half of the full time.
     'ad_continue_time_fraction': 0.5,
   };
 
@@ -57,15 +68,15 @@ class RemoteConfigService {
     try {
       await _remoteConfig.fetchAndActivate();
     } catch (error) {
-      // Keep using the local defaults / last activated values if fetch fails.
-      // Do not prevent the game from starting because Remote Config is offline.
+      // Keep using local defaults if fetch fails.
+      // Do not prevent the game from starting.
     }
 
     _initialized = true;
   }
 
-  // Safe getters: fall back to the local defaults if initialize() was not
-  // called yet, so the game never crashes because of Remote Config.
+  // ==================== Safe getters ====================
+
   int _int(String key) => _initialized
       ? _remoteConfig.getInt(key)
       : (_defaults[key] as num).toInt();
@@ -77,16 +88,29 @@ class RemoteConfigService {
   bool _bool(String key) =>
       _initialized ? _remoteConfig.getBool(key) : _defaults[key] as bool;
 
-  // Hints / Ads
+  // ==================== AD CONTROL ====================
+
+  /// Master switch: if false, NO ads are shown anywhere in the app.
+  bool get adsEnabled => _bool('ads_enabled');
+
+  /// true = REAL ad unit IDs (monetized ads).
+  /// false = TEST ad unit IDs (safe for testing).
+  bool get isRelease => _bool('is_release');
+
+  /// true = debug behavior (test ads, logging, debug tools).
+  /// false = clean production behavior.
+  bool get isDebug => _bool('is_debug');
+
+  // ==================== Hints / Ads ====================
+
   int get initialHints => _int('initial_hints');
 
   int get hintsPerAd => _int('hints_per_ad');
 
   int get interstitialEveryLevels => _int('interstitial_every_levels');
 
-  bool get adsEnabled => _bool('ads_enabled');
+  // ==================== Coins ====================
 
-  // Coins
   int get rewardBase => _int('reward_base');
 
   int get rewardStep => _int('reward_step');
@@ -101,19 +125,16 @@ class RemoteConfigService {
 
   int get comboCoins10 => _int('combo_coins_10');
 
-  // Ad bonus multipliers after a win (x1.2 / x1.5)
   double get bonusMultiplierLow => _double('bonus_multiplier_low');
 
   double get bonusMultiplierHigh => _double('bonus_multiplier_high');
 
-  // Rewarded Ad - Continue
+  // ==================== Rewarded Ad - Continue ====================
+
   int get continueLives => _int('continue_lives');
 
-  /// Fraction of the FULL timer given after the continue ad (0.5 = half).
   double get adContinueTimeFraction =>
       _double('ad_continue_time_fraction').clamp(0.05, 1.0).toDouble();
 
-  /// Optional: force a fresh fetch when the user explicitly requests it.
-  /// Firebase minimumFetchInterval still applies unless overridden in settings.
   Future<bool> fetchAndActivate() => _remoteConfig.fetchAndActivate();
 }
