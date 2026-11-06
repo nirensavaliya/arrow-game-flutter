@@ -233,21 +233,40 @@ class _ResultDialogState extends State<ResultDialog>
 
     return Stack(
       children: [
+        // 1) Blurred backdrop
         Positioned.fill(
           child: FadeTransition(
             opacity: backdrop,
             child: BackdropFilter(
               filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
               child: ColoredBox(
-                color:
-                    (_isDark
-                            ? const Color(0xFF0B0D20)
-                            : const Color(0xFF1B2233))
-                        .withValues(alpha: 0.55),
+                color: (_isDark
+                    ? const Color(0xFF0B0D20)
+                    : const Color(0xFF1B2233))
+                    .withValues(alpha: 0.55),
               ),
             ),
           ),
         ),
+
+        // 2) Confetti: now BEHIND the card
+        if (won)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _confetti,
+                builder: (_, _) => CustomPaint(
+                  painter: _ConfettiPainter(
+                    _particles,
+                    _shots,
+                    _confetti.value * _confettiClockSeconds,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+        // 3) Dialog card: on top
         Center(
           child: AnimatedBuilder(
             animation: _c,
@@ -265,21 +284,6 @@ class _ResultDialogState extends State<ResultDialog>
             child: _card(title, message, primary, secondary),
           ),
         ),
-        if (won)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: AnimatedBuilder(
-                animation: _confetti,
-                builder: (_, _) => CustomPaint(
-                  painter: _ConfettiPainter(
-                    _particles,
-                    _shots,
-                    _confetti.value * _confettiClockSeconds,
-                  ),
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }

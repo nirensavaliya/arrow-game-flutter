@@ -221,4 +221,19 @@ class GameStorage {
     final w2 = addCoins(coins);
     await Future.wait([w1, w2]);
   }
+
+  // ---------------------------------------------------------------------------
+  // Restarts: one shared count for ALL modes
+  // ---------------------------------------------------------------------------
+
+  static const String _restartsKey = 'arrow_game_restarts_remaining';
+
+  static int loadRestarts(int defaultValue) {
+    final v = _storage.read(_restartsKey);
+    return v is num ? v.toInt() : defaultValue;
+  }
+
+  static Future<void> saveRestarts(int value) async {
+    await _storage.write(_restartsKey, value < 0 ? 0 : value);
+  }
 }

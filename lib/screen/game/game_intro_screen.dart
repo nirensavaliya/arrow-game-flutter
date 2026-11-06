@@ -1,3 +1,4 @@
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -122,12 +123,12 @@ class _GameIntroScreenState extends State<GameIntroScreen>
 
     _intro = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 850),
+      duration: const Duration(milliseconds: 950),
     )..forward();
 
     _ambient = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 7),
+      duration: const Duration(seconds: 10),
     )..repeat(reverse: true);
   }
 
@@ -170,9 +171,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
   // --------------------------------------------------
   // LEVEL PROGRESS (per mode)
   // --------------------------------------------------
-  //
-  // Reads each mode's own saved progress from GameStorage.
-  // The UI refreshes automatically when you return from a game.
+
   _ModeProgress _progressFor(GameMode mode) {
     final int totalLevels = LevelDesigns.totalLevels;
 
@@ -217,15 +216,14 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     });
   }
 
-  // Tap on a side card: scroll to it (selection follows the page change).
   void _selectMode(int index) {
     if (index == _selectedMode) return;
 
     if (_pageController.hasClients) {
       _pageController.animateToPage(
         index,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 550),
+        curve: Curves.easeInOutCubic,
       );
     } else {
       VibrationService.tap();
@@ -235,7 +233,6 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     }
   }
 
-  // Swipe settled on a new card.
   void _onPageChanged(int index) {
     if (index == _selectedMode) return;
 
@@ -279,25 +276,37 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     }
   }
 
+  // --------------------------------------------------
+  // REFINED SCREEN REVEAL ANIMATION
+  // --------------------------------------------------
+
   Widget _reveal(double start, Widget child) {
     final animation = CurvedAnimation(
       parent: _intro,
       curve: Interval(
         start,
-        math.min(1.0, start + 0.55),
-        curve: Curves.easeOutCubic,
+        math.min(1.0, start + 0.48),
+        curve: Curves.easeOutQuart,
       ),
     );
 
     return AnimatedBuilder(
       animation: animation,
-      builder: (context, _) => Opacity(
-        opacity: animation.value,
-        child: Transform.translate(
-          offset: Offset(0, 18 * (1 - animation.value)),
-          child: child,
-        ),
-      ),
+      child: child,
+      builder: (context, child) {
+        final value = animation.value;
+
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 12 * (1 - value)),
+            child: Transform.scale(
+              scale: 0.985 + (0.015 * value),
+              child: child,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -318,21 +327,31 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                   child: _reveal(0.0, _buildTopBar(mode)),
                 ),
                 Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.only(top: 20, bottom: 14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: _reveal(0.06, _buildHeading()),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final carouselHeight =
+                      (constraints.maxHeight * 0.78).clamp(340.0, 468.0);
+
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.only(top: 12, bottom: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding:
+                              const EdgeInsets.symmetric(horizontal: 20),
+                              child: _reveal(0.06, _buildHeading()),
+                            ),
+                            const SizedBox(height: 18),
+                            _reveal(
+                              0.16,
+                              _buildCarousel(height: carouselHeight),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                         ),
-                        const SizedBox(height: 18),
-                        _reveal(0.16, _buildCarousel()),
-                        const SizedBox(height: 12),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ),
                 _reveal(0.42, _buildBottomBar(mode)),
@@ -352,7 +371,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     return AnimatedBuilder(
       animation: _ambient,
       builder: (context, _) {
-        final drift = math.sin(_ambient.value * math.pi) * 22;
+        final drift = math.sin(_ambient.value * math.pi) * 16;
 
         return Stack(
           children: [
@@ -414,7 +433,8 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     return Row(
       children: [
         AnimatedContainer(
-          duration: const Duration(milliseconds: 400),
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeInOutCubic,
           width: 46,
           height: 46,
           decoration: BoxDecoration(
@@ -448,7 +468,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Arrow Maze',
+                'Arrow Escape',
                 style: TextStyle(
                   color: _textPrimary,
                   fontSize: 20,
@@ -584,12 +604,12 @@ class _GameIntroScreenState extends State<GameIntroScreen>
   }
 
   // --------------------------------------------------
-  // CAROUSEL  (mode card + separate progress card per page)
+  // CAROUSEL
   // --------------------------------------------------
 
-  Widget _buildCarousel() {
+  Widget _buildCarousel({required double height}) {
     return SizedBox(
-      height: 468,
+      height: height,
       child: PageView.builder(
         controller: _pageController,
         physics: const BouncingScrollPhysics(),
@@ -600,26 +620,43 @@ class _GameIntroScreenState extends State<GameIntroScreen>
             animation: _pageController,
             builder: (context, child) {
               double page = _selectedMode.toDouble();
+
               if (_pageController.position.haveDimensions) {
                 page = _pageController.page ?? page;
               }
 
               final distance = (page - index).abs().clamp(0.0, 1.0);
-              final scale = 1 - (distance * 0.08);
-              final opacity = 1 - (distance * 0.7);
+
+              final curvedDistance =
+              Curves.easeOutCubic.transform(distance);
+
+              final scale = 1 - (curvedDistance * 0.055);
+              final opacity = 1 - (curvedDistance * 0.42);
+              final verticalOffset = curvedDistance * 5;
 
               return Center(
-                child: Transform.scale(
-                  scale: scale,
-                  child: Opacity(opacity: opacity, child: child),
+                child: Transform.translate(
+                  offset: Offset(0, verticalOffset),
+                  child: Transform.scale(
+                    scale: scale,
+                    child: Opacity(
+                      opacity: opacity,
+                      child: child,
+                    ),
+                  ),
                 ),
               );
             },
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 6,
+              ),
               child: Column(
                 children: [
-                  Expanded(child: _buildModeCard(_modes[index], index)),
+                  Expanded(
+                    child: _buildModeCard(_modes[index], index),
+                  ),
                   _buildConnector(_modes[index]),
                   _buildProgressCard(_modes[index], index),
                 ],
@@ -631,7 +668,6 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     );
   }
 
-  // Small link between the mode card and its progress card
   Widget _buildConnector(_GameMode mode) {
     return SizedBox(
       height: 20,
@@ -661,8 +697,8 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     return GestureDetector(
       onTap: () => _selectMode(index),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOutCubic,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(30),
           gradient: LinearGradient(
@@ -675,7 +711,6 @@ class _GameIntroScreenState extends State<GameIntroScreen>
             width: selected ? 0.5 : 0,
           ),
           boxShadow: [
-            // 1. Colored glow: the main "premium" light under the card
             BoxShadow(
               color: mode.color.withValues(
                 alpha: selected ? (_isDark ? 0.42 : 0.34) : 0.10,
@@ -684,15 +719,11 @@ class _GameIntroScreenState extends State<GameIntroScreen>
               spreadRadius: selected ? -6 : -2,
               offset: Offset(0, selected ? 16 : 6),
             ),
-
-            // 2. Tight contact shadow in the deep tint: grounds the card
             BoxShadow(
               color: mode.colorDeep.withValues(alpha: selected ? 0.35 : 0.12),
               blurRadius: selected ? 12 : 6,
               offset: Offset(0, selected ? 6 : 3),
             ),
-
-            // 3. Wide neutral ambient shadow: adds depth against the background
             BoxShadow(
               color: Colors.black.withValues(
                 alpha: _isDark
@@ -864,7 +895,8 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                             ),
                           ),
                           AnimatedContainer(
-                            duration: const Duration(milliseconds: 280),
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeInOutCubic,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
                               vertical: 5,
@@ -943,7 +975,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
   }
 
   // --------------------------------------------------
-  // PROGRESS CARD (separate, styled to match its mode)
+  // PROGRESS CARD
   // --------------------------------------------------
 
   Widget _buildProgressCard(_GameMode mode, int index) {
@@ -973,10 +1005,9 @@ class _GameIntroScreenState extends State<GameIntroScreen>
       ),
       child: Row(
         children: [
-          // Progress ring
           TweenAnimationBuilder<double>(
             tween: Tween<double>(begin: 0, end: percent),
-            duration: const Duration(milliseconds: 900),
+            duration: const Duration(milliseconds: 1200),
             curve: Curves.easeOutCubic,
             builder: (context, value, _) {
               return SizedBox(
@@ -1007,9 +1038,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
               );
             },
           ),
-
           const SizedBox(width: 14),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1063,7 +1092,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                 const SizedBox(height: 8),
                 TweenAnimationBuilder<double>(
                   tween: Tween<double>(begin: 0, end: percent),
-                  duration: const Duration(milliseconds: 900),
+                  duration: const Duration(milliseconds: 1200),
                   curve: Curves.easeOutCubic,
                   builder: (context, value, _) {
                     return ClipRRect(
@@ -1120,115 +1149,99 @@ class _GameIntroScreenState extends State<GameIntroScreen>
   Widget _buildBottomBar(_GameMode mode) {
     final progress = _progressFor(_selectedGameMode);
 
-    // Check whether the selected mode has been played before.
-    final bool hasPlayed = progress.clearedLevels > 0 ||
-        progress.currentLevel > 1;
+    final bool hasPlayed =
+        progress.clearedLevels > 0 || progress.currentLevel > 1;
 
-    // Dynamic button title and icon.
     final String buttonLabel = hasPlayed
         ? 'Continue Level ${progress.currentLevel}'
         : mode.cta;
 
-    final IconData buttonIcon = hasPlayed
-        ? Icons.play_circle_outline_rounded
-        : mode.ctaIcon;
+    final IconData buttonIcon =
+    hasPlayed ? Icons.play_circle_outline_rounded : mode.ctaIcon;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(15, 15, 15, 10),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(15, 12, 15, 12),
       decoration: BoxDecoration(
-        color: _bg.withValues(alpha: _isDark ? 0.94 : 0.96),
-        border: Border(top: BorderSide(color: _hairline)),
+        color: _bg.withValues(alpha: _isDark ? 0.97 : 0.98),
+        border: Border(
+          top: BorderSide(color: _hairline),
+        ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: double.infinity,
-            height: 60,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 350),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [mode.color, mode.colorDeep],
-                ),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.22),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: mode.color.withValues(
-                      alpha: _isDark ? 0.40 : 0.30,
-                    ),
-                    blurRadius: 24,
-                    offset: const Offset(0, 9),
-                  ),
-                ],
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          width: double.infinity,
+          height: 58,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 450),
+            curve: Curves.easeInOutCubic,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [mode.color, mode.colorDeep],
               ),
-              child: ElevatedButton(
-                onPressed: _startGame,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: mode.color.withValues(
+                    alpha: _isDark ? 0.35 : 0.25,
                   ),
+                  blurRadius: 22,
+                  offset: const Offset(0, 7),
                 ),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: Row(
-                    key: ValueKey(
-                      '$_selectedMode-$buttonLabel',
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: _startGame,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+              ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.12),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
                     ),
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(buttonIcon, size: 22),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          buttonLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16.5,
-                            letterSpacing: -0.2,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
+                  );
+                },
+                child: Row(
+                  key: ValueKey('$_selectedMode-$buttonLabel'),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(buttonIcon, size: 22),
+                    const SizedBox(width: 7),
+                    Text(
+                      buttonLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16.5,
+                        letterSpacing: -0.2,
+                        fontWeight: FontWeight.w900,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.cloud_done_rounded,
-                size: 13,
-                color: _textSecondary.withValues(alpha: 0.85),
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  'Progress is saved separately for each mode',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: _textSecondary.withValues(alpha: 0.85),
-                    fontSize: 10.5,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

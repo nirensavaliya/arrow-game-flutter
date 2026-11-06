@@ -162,7 +162,7 @@ class _SplashScreenState extends State<SplashScreen>
                     _reveal(
                       0.18,
                       Text(
-                        'Arrow Maze',
+                        'Arrow Escape',
                         style: TextStyle(
                           color: _textPrimary,
                           fontSize: 32,

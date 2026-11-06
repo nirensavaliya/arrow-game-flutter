@@ -32,6 +32,10 @@ class RemoteConfigService {
     /// false = normal behavior.
     'is_debug': false,
 
+    // ==================== Restarts ====================
+    'initial_restarts': 5,
+    'restarts_per_ad': 5,
+
     // ==================== Hints / Ads ====================
     'initial_hints': 0,
     'hints_per_ad': 1,
@@ -100,6 +104,16 @@ class RemoteConfigService {
   /// true = debug behavior (test ads, logging, debug tools).
   /// false = clean production behavior.
   bool get isDebug => _bool('is_debug');
+
+  // ==================== Restarts ====================
+
+  /// Restarts a new player starts with.
+  int get initialRestarts =>
+      _int('initial_restarts').clamp(0, 999).toInt();
+
+  /// Restarts granted after watching a rewarded ad.
+  int get restartsPerAd =>
+      _int('restarts_per_ad').clamp(0, 999).toInt();
 
   // ==================== Hints / Ads ====================
 

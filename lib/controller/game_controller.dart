@@ -131,6 +131,47 @@ class GameController extends GetxController {
   // Hints are earned by watching rewarded ads.
   int get hintsPerAd => _rc.hintsPerAd;
 
+  // ==================== RESTART LIMIT ====================
+  // Values come from Firebase Remote Config.
+  int get initialRestarts => _rc.initialRestarts;
+  int get restartsPerAd => _rc.restartsPerAd;
+
+  // Uses _rc directly because a field initializer cannot read instance getters.
+  final restartsRemaining = GameStorage.loadRestarts(_rc.initialRestarts).obs;
+
+  /// Uses one restart. Returns false when none are left.
+  bool consumeRestart() {
+    // Ads off = no limit (the player has no way to earn more).
+    if (!adsEnabled) return true;
+
+    if (restartsRemaining.value <= 0) return false;
+
+    restartsRemaining.value--;
+    unawaited(GameStorage.saveRestarts(restartsRemaining.value));
+    return true;
+  }
+
+  /// Called after the player earns a rewarded ad.
+  void grantRestartsFromAd() {
+    if (!adsEnabled) return;
+
+    final granted = restartsPerAd;
+    if (granted <= 0) return;
+
+    restartsRemaining.value += granted;
+    unawaited(GameStorage.saveRestarts(restartsRemaining.value));
+
+    _track(
+      'rewarded_restarts_granted',
+      parameters: {
+        'level': level.value,
+        'mode': selectedMode.value.name,
+        'restarts': granted,
+      },
+    );
+    VibrationService.success();
+  }
+
   // Ad coin bonus multipliers shown after a win (x1.2 / x1.5).
   double get bonusMultiplierLow => _rc.bonusMultiplierLow;
 

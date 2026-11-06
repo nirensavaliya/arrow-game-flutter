@@ -605,6 +605,68 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       onClosedWithoutReward: () {},
     );
   }
+  void _onRestartTap(GameController c) {
+    // Has restarts: use one and restart.
+    if (c.consumeRestart()) {
+      setState(() => _restartTurns -= 1);
+      _restartLevel(c);
+      return;
+    }
+
+    // No restarts left: offer the rewarded ad.
+    if (!RemoteConfigService.instance.adsEnabled) {
+      Get.snackbar(
+        'No restarts left',
+        'You have used all your restarts.',
+        snackPosition: SnackPosition.TOP,
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+
+    _watchAdForRestart(c);
+  }
+
+  void _watchAdForRestart(GameController c) {
+    if (!mounted) return;
+
+    // Pause the countdown during the ad, but only if the player hadn't paused it.
+    final pausedByAd = c.timedMode && !c.isPaused.value && !c.isGameOver.value;
+    if (pausedByAd) c.pauseGame();
+
+    void resumeIfNeeded() {
+      if (pausedByAd && mounted && !c.isGameOver.value) c.resumeGame();
+    }
+
+    _tapFeedback();
+
+    _rewardedAdService.showAd(
+      onRewardEarned: () {
+        if (!mounted) return;
+        c.grantRestartsFromAd(); // + restartsPerAd restarts (Remote Config)
+
+        // Use one of the new restarts right away.
+        // restartLevel() reloads the level, which restarts the timer itself.
+        if (c.consumeRestart()) {
+          setState(() => _restartTurns -= 1);
+          _restartLevel(c);
+        } else {
+          resumeIfNeeded();
+        }
+      },
+      onUnavailable: () {
+        resumeIfNeeded();
+        if (!mounted) return;
+        Get.snackbar(
+          'Ad not ready',
+          'Please try again in a moment.',
+          snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 3),
+        );
+      },
+      onClosedWithoutReward: resumeIfNeeded,
+    );
+  }
 
   void _watchAdForHint(GameController c) {
     if (!mounted) return;
@@ -785,9 +847,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       constraints: const BoxConstraints(maxWidth: 560),
                       child: Column(
                         children: [
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 5),
                           _enter(_statusAnim, _statusCard(c), dy: -10),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 5),
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
@@ -801,9 +863,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 5),
                           _enter(_bottomAnim, _dock(c), dy: 20),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 5),
                         ],
                       ),
                     ),
@@ -1037,18 +1099,22 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               border: _glassBorder,
               onTap: () => _exit(c),
             ),
-            // Restart button
-            _GlassIconButton(
-              icon: Icons.refresh_rounded,
-              color: _modeColor,
-              glass: _glass,
-              border: _glassBorder,
-              turns: _restartTurns,
-              onTap: () {
-                setState(() => _restartTurns -= 1);
-                _restartLevel(c);
-              },
-            ),
+            // Restart button (with remaining count / AD badge)
+            Obx(() {
+              final left = c.restartsRemaining.value;
+              final showBadge = c.adsEnabled;
+
+              return _GlassIconButton(
+                icon: Icons.refresh_rounded,
+                color: _modeColor,
+                glass: _glass,
+                border: _glassBorder,
+                turns: _restartTurns,
+                badge: showBadge ? (left > 0 ? '$left' : 'AD') : null,
+                badgeColor: left > 0 ? _modeColor : _red,
+                onTap: () => _onRestartTap(c),
+              );
+            }),
 
             // Level title in the centre
             Expanded(
@@ -1075,8 +1141,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 30,
-                        height: 30,
+                        width: 28,
+                        height: 28,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: const LinearGradient(
@@ -1183,13 +1249,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(24),
         color: Color.lerp(_surface, _modeColor, _isDark ? 0.08 : 0.04),
         border: Border.all(
-          color: _modeColor.withValues(alpha: _isDark ? 0.40 : 0.30),
+          color: _modeColor.withValues(alpha: _isDark ? 0.10 : 0.05),
           width: 0.6,
         ),
         boxShadow: [
           BoxShadow(
-            color: _modeColor.withValues(alpha: _isDark ? 0.12 : 0.09),
-            blurRadius: 22,
+            color: _modeColor.withValues(alpha: _isDark ? 0.05 : 0.05),
+            blurRadius: 30,
             offset: const Offset(0, 8),
           ),
         ],
@@ -1330,7 +1396,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       decoration: BoxDecoration(
         color: _red.withValues(alpha: _isDark ? 0.12 : 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _red.withValues(alpha: 0.18)),
+        border: Border.all(color: _red.withValues(alpha: 0.05)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1354,7 +1420,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     color: i < c.lives.value
                         ? _red
                         : _textSecondary.withValues(alpha: 0.35),
-                    size: 22,
+                    size: 24,
                   ),
                 ),
               ),
@@ -1382,7 +1448,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           color: color.withValues(alpha: _isDark ? 0.16 : 0.12),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.30)),
+          border: Border.all(color: color.withValues(alpha: 0.05)),
           boxShadow: urgent
               ? [
                   BoxShadow(
@@ -1581,7 +1647,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       final remaining = c.hintsRemaining.value;
 
       return Container(
-        padding: const EdgeInsets.all(7),
+        padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
           color: _glass,
           borderRadius: BorderRadius.circular(30),
@@ -2519,6 +2585,8 @@ class _GlassIconButton extends StatefulWidget {
   final Color glass;
   final Color border;
   final double turns;
+  final String? badge;
+  final Color badgeColor;
   final VoidCallback onTap;
 
   const _GlassIconButton({
@@ -2530,6 +2598,8 @@ class _GlassIconButton extends StatefulWidget {
     this.iconSize = 22,
     this.size = 44,
     this.turns = 0,
+    this.badge,
+    this.badgeColor = const Color(0xFF2F80FF),
   });
 
   @override
@@ -2555,34 +2625,61 @@ class _GlassIconButtonState extends State<_GlassIconButton> {
         scale: _down ? 0.9 : 1.0,
         duration: const Duration(milliseconds: 70),
         curve: Curves.easeOut,
-        child: Container(
-          width: widget.size,
-          height: widget.size,
-          decoration: BoxDecoration(
-            color: widget.glass,
-            shape: BoxShape.circle,
-            border: Border.all(color: widget.border),
-            boxShadow: [
-              BoxShadow(
-                color: widget.color.withValues(alpha: 0.12),
-                blurRadius: 14,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Center(
-            child: AnimatedRotation(
-              turns: widget.turns,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutCubic,
-              child: Icon(
-                widget.icon,
-                size: widget.iconSize,
-                color: widget.color,
+        child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              color: widget.glass,
+              shape: BoxShape.circle,
+              border: Border.all(color: widget.border),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withValues(alpha: 0.12),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Center(
+              child: AnimatedRotation(
+                turns: widget.turns,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                child: Icon(widget.icon, size: widget.iconSize, color: widget.color),
               ),
             ),
           ),
-        ),
+          if (widget.badge != null)
+            Positioned(
+              top: -3,
+              right: -3,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: widget.badgeColor,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    width: 1.2,
+                  ),
+                ),
+                child: Text(
+                  widget.badge!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
       ),
     );
   }
@@ -2630,8 +2727,8 @@ class _DockButtonState extends State<_DockButton> {
         duration: const Duration(milliseconds: 70),
         curve: Curves.easeOut,
         child: SizedBox(
-          width: 52,
-          height: 52,
+          width: 48,
+          height: 48,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
