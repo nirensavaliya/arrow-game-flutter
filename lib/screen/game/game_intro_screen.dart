@@ -33,8 +33,6 @@ class _GameIntroScreenState extends State<GameIntroScreen>
   static const Color _lightTextPrimary = Color(0xFF14162A);
   static const Color _lightTextSecondary = Color(0xFF6F7390);
 
-  static const Color _gold = Color(0xFFFFC857);
-
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
 
   Color get _bg => _isDark ? _darkBg : _lightBg;
@@ -323,7 +321,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(15, 10, 15, 0),
+                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
                   child: _reveal(0.0, _buildTopBar(mode)),
                 ),
                 Expanded(
@@ -444,9 +442,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
               colors: [mode.color, mode.colorDeep],
             ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.25),
-            ),
+
             boxShadow: [
               BoxShadow(
                 color: mode.color.withValues(alpha: 0.35),
@@ -506,7 +502,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
       decoration: BoxDecoration(
         color: _surface.withValues(alpha: _isDark ? 0.75 : 0.95),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _hairline),
+
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -525,12 +521,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                   Color(0xFFE07F0E),
                 ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: _gold.withValues(alpha: 0.35),
-                  blurRadius: 10,
-                ),
-              ],
+
             ),
             child: const Icon(
               Icons.monetization_on_rounded,
@@ -553,24 +544,32 @@ class _GameIntroScreenState extends State<GameIntroScreen>
     );
   }
 
+
   Widget _glassIconButton({
     required IconData icon,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: _surface.withValues(alpha: _isDark ? 0.75 : 0.95),
-      shape: CircleBorder(side: BorderSide(color: _hairline)),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(icon, size: 20, color: _textPrimary),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: _surface.withValues(
+            alpha: _isDark ? 0.82 : 0.96,
+          ),
+
+        ),
+        child: Icon(
+          icon,
+          size: 19,
+          color: _textPrimary,
         ),
       ),
     );
   }
+
 
   // --------------------------------------------------
   // HEADING
@@ -1161,7 +1160,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(15, 12, 15, 12),
+      padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
       decoration: BoxDecoration(
         color: _bg.withValues(alpha: _isDark ? 0.97 : 0.98),
         border: Border(

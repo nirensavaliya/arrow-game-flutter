@@ -106,6 +106,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late final RewardedAdService _rewardedAdService;
   late final InterstitialAdService _interstitialAdService;
 
+  late int _prevWrongClicks;
   // Show an interstitial every N levels (N comes from Firebase Remote Config,
   // key: interstitial_every_levels, default 5).
   int get _adEveryLevels =>
@@ -113,6 +114,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Worker? _livesWorker;
   int _prevLives = -1;
+
+  Worker? _wrongClicksWorker;
 
   Worker? _arrowsWorker;
   int _prevArrows = -1;
@@ -420,7 +423,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
     // Ad every N levels (N from Remote Config), only when ads are enabled
     // (never after level 1 unless N is 1).
-    if (RemoteConfigService.instance.adsEnabled &&
+    if (c.canShowInterstitial &&
         _adEveryLevels > 0 &&
         finished % _adEveryLevels == 0) {
       _interstitialAdService.show(onDone: proceed);
@@ -481,7 +484,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         compact: true,
       );
     } else {
-      if (!RemoteConfigService.instance.adsEnabled) {
+      // _onHint
+      if (!c.canShowRewarded) {
         Get.snackbar(
           'No hints available',
           'You have used all your hints.',
@@ -614,7 +618,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
 
     // No restarts left: offer the rewarded ad.
-    if (!RemoteConfigService.instance.adsEnabled) {
+    // _onRestartTap
+    if (!c.canShowRewarded) {
       Get.snackbar(
         'No restarts left',
         'You have used all your restarts.',
@@ -623,7 +628,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       );
       return;
     }
-
     _watchAdForRestart(c);
   }
 
@@ -730,10 +734,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _rewardedAdService = RewardedAdService();
     _interstitialAdService = InterstitialAdService();
 
-    if (RemoteConfigService.instance.adsEnabled) {
-      _rewardedAdService.loadAd();
-      _interstitialAdService.loadAd();
-    }
+    final c0 = Get.find<GameController>();
+    if (c0.canShowRewarded) _rewardedAdService.loadAd();
+    if (c0.canShowInterstitial) _interstitialAdService.loadAd();
     _readArguments();
 
     _entranceController = AnimationController(
@@ -800,6 +803,31 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         _prevLives = v;
       });
 
+      _prevWrongClicks = c.wrongClicks.value;
+
+      _wrongClicksWorker = ever<int>(c.wrongClicks, (value) {
+        if (value > _prevWrongClicks &&
+            (_mode == GameMode.timedChallenge ||
+                _mode == GameMode.speedRun)) {
+          _resetCombo();
+
+          if (mounted) {
+            _shakeController.forward(from: 0);
+
+            // _showPop(
+            //   icon: Icons.warning_amber_rounded,
+            //   emoji: '⚠️',
+            //   color: _red,
+            //   big: 'OOPS!',
+            //   label: 'Wrong move',
+            //   compact: true,
+            // );
+          }
+        }
+
+        _prevWrongClicks = value;
+      });
+
       if (mounted) _playEntrance();
     });
   }
@@ -808,6 +836,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void dispose() {
     _comboTimer?.cancel();
     _livesWorker?.dispose();
+    _wrongClicksWorker?.dispose();
     _arrowsWorker?.dispose();
     _shakeController.dispose();
     _drawController.dispose();
@@ -996,13 +1025,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 onHome: () => Get.until((route) => route.isFirst),
 
                 // Show the rewarded-ad button only after all hearts are lost.
-                onWatchAd: !won && RemoteConfigService.instance.adsEnabled
-                    ? () => _watchRewardedAd(c)
-                    : null,
+                onWatchAd: !won && c.canShowRewarded ? () => _watchRewardedAd(c) : null,
+
                 bonusClaimed: c.bonusClaimed.value,
-                onWatchAdBonus: won && RemoteConfigService.instance.adsEnabled
-                    ? (m) => _watchAdForBonus(c, m)
-                    : null,
+                onWatchAdBonus: won && c.canShowRewarded ? (m) => _watchAdForBonus(c, m) : null,
+
               ),
             );
           }),
@@ -1102,8 +1129,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             // Restart button (with remaining count / AD badge)
             Obx(() {
               final left = c.restartsRemaining.value;
-              final showBadge = c.adsEnabled;
-
+              final showBadge = c.canShowRewarded;
               return _GlassIconButton(
                 icon: Icons.refresh_rounded,
                 color: _modeColor,

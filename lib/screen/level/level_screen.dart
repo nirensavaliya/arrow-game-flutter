@@ -443,7 +443,7 @@ class _LevelScreenState extends State<LevelScreen>
 
   Widget _topBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
       child: Row(
         children: [
           _backButton(),
@@ -494,28 +494,31 @@ class _LevelScreenState extends State<LevelScreen>
     );
   }
 
+
   Widget _backButton() {
-    return Material(
-      color: _surface.withValues(alpha: _isDark ? 0.75 : 0.95),
-      shape: CircleBorder(side: BorderSide(color: _hairline)),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          Get.back();
-        },
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 18,
-            color: _textPrimary,
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        Get.back();
+      },
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: _surface.withValues(
+            alpha: _isDark ? 0.82 : 0.96,
           ),
+        ),
+        child: Icon(
+          Icons.arrow_back_ios_new_rounded,
+          size: 18,
+          color: _textPrimary,
         ),
       ),
     );
   }
+
 
   Widget _starCounter() {
     return Container(
@@ -561,7 +564,7 @@ class _LevelScreenState extends State<LevelScreen>
         .length;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
@@ -571,10 +574,7 @@ class _LevelScreenState extends State<LevelScreen>
             end: Alignment.bottomRight,
             colors: [_modeColor, _modeDeep],
           ),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.40),
-            width: 1.3,
-          ),
+
           boxShadow: [
             BoxShadow(
               color: _modeColor.withValues(alpha: _isDark ? 0.38 : 0.30),
@@ -624,7 +624,7 @@ class _LevelScreenState extends State<LevelScreen>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+                padding: const EdgeInsets.fromLTRB(10, 20, 10, 18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -774,7 +774,7 @@ class _LevelScreenState extends State<LevelScreen>
 
   Widget _segmentList(int unlocked) {
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 30),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
           final segment = _segments[index];
@@ -871,7 +871,7 @@ class _LevelScreenState extends State<LevelScreen>
           ),
 
           Padding(
-            padding: const EdgeInsets.fromLTRB(15, 15, 15, 14),
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

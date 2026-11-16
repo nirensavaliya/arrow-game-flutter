@@ -9,6 +9,7 @@ import '../model/arrow_model.dart';
 import '../modes/game_mode.dart';
 import '../modes/game_mode_config.dart';
 import '../screen/level/level_design.dart';
+import '../services/ads/ad_config.dart';
 import '../services/analytics_service.dart';
 import '../storage/game_storage.dart';
 import '../services/remote_config_service.dart';
@@ -46,17 +47,11 @@ class GameController extends GetxController {
   /// Master switch for every ad placement in the game.
   bool get adsEnabled => _rc.adsEnabled;
 
-  /// Debug behavior flag from Firebase Remote Config.
-  /// AdConfig also applies kDebugMode as a hard safety net for ad IDs.
-  bool get isDebug => _rc.isDebug;
-
-  /// Release/monetization flag from Firebase Remote Config.
-  /// Real IDs are selected only when isDebug is false.
-  bool get isRelease => _rc.isRelease;
-
   /// Use this before presenting any ad-related UI. The ad services must also
   /// check adsEnabled immediately before loading and showing an ad.
   bool get canShowAds => adsEnabled;
+  bool get canShowInterstitial => AdConfig.interstitialEnabled;
+  bool get canShowRewarded => AdConfig.rewardedEnabled;
 
   /// Number of completed levels between interstitial opportunities.
   /// A value of 0 disables interstitial scheduling.
@@ -141,8 +136,8 @@ class GameController extends GetxController {
 
   /// Uses one restart. Returns false when none are left.
   bool consumeRestart() {
-    // Ads off = no limit (the player has no way to earn more).
-    if (!adsEnabled) return true;
+    // No way to earn more restarts → no limit.
+    if (!canShowRewarded) return true;
 
     if (restartsRemaining.value <= 0) return false;
 
@@ -153,7 +148,7 @@ class GameController extends GetxController {
 
   /// Called after the player earns a rewarded ad.
   void grantRestartsFromAd() {
-    if (!adsEnabled) return;
+    if (!canShowRewarded) return;
 
     final granted = restartsPerAd;
     if (granted <= 0) return;
@@ -378,8 +373,7 @@ class GameController extends GetxController {
   void grantHintFromAd() {
     // A rewarded callback must not grant anything if ads were disabled
     // remotely while the ad was loading or being shown.
-    if (!adsEnabled) return;
-
+    if (!canShowRewarded) return;
     final granted = hintsPerAd;
     if (granted <= 0) return;
 
@@ -2262,8 +2256,7 @@ class GameController extends GetxController {
   ///  - Timed Challenge / Speed Run, wrong-click limit: resets wrong clicks.
   void continueAfterRewardedAd() {
     // Do not grant a continue if ads were disabled remotely.
-    if (!adsEnabled) return;
-
+    if (!canShowRewarded) return;
     // Only revive a game that has actually ended.
     if (!isGameOver.value || isWon.value) return;
 
@@ -2339,7 +2332,7 @@ class GameController extends GetxController {
   /// Called after the rewarded ad finishes. One claim per win.
   void claimBonusCoins(double multiplier) {
     // Do not grant ad-multiplier coins if ads were disabled remotely.
-    if (!adsEnabled) return;
+    if (!canShowRewarded) return;
 
     if (!isWon.value || !_rewardPaid || bonusClaimed.value) return;
     if (earnedCoins.value <= 0) return;

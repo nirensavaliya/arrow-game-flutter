@@ -18,19 +18,21 @@ class RemoteConfigService {
   bool get isInitialized => _initialized;
 
   static const Map<String, dynamic> _defaults = <String, dynamic>{
-    // ==================== AD CONTROL (3 separate parameters) ====================
+    // ==================== AD CONTROL ====================
 
     /// Master switch: false = no ads shown at all.
     'ads_enabled': false,
 
-    /// true = use REAL ad unit IDs (monetized).
-    /// false = use TEST ad unit IDs.
-    'is_release': false,
+    /// Per-type switches (only matter when ads_enabled is true).
+    'interstitial_enabled': true,
+    'rewarded_enabled': true,
 
-    /// true = app behaves like debug mode
-    ///        (test ads, extra logging, debug UI, etc.)
-    /// false = normal behavior.
-    'is_debug': false,
+    /// REAL ad unit IDs (used only in release builds).
+    /// Leave empty here; set the real values in Firebase Console.
+    'interstitial_id_android': '',
+    'interstitial_id_ios': '',
+    'rewarded_id_android': '',
+    'rewarded_id_ios': '',
 
     // ==================== Restarts ====================
     'initial_restarts': 5,
@@ -92,18 +94,26 @@ class RemoteConfigService {
   bool _bool(String key) =>
       _initialized ? _remoteConfig.getBool(key) : _defaults[key] as bool;
 
+  String _string(String key) => _initialized
+      ? _remoteConfig.getString(key).trim()
+      : (_defaults[key] as String).trim();
+
   // ==================== AD CONTROL ====================
 
   /// Master switch: if false, NO ads are shown anywhere in the app.
   bool get adsEnabled => _bool('ads_enabled');
 
-  /// true = REAL ad unit IDs (monetized ads).
-  /// false = TEST ad unit IDs (safe for testing).
-  bool get isRelease => _bool('is_release');
+  /// Interstitial switch (also requires adsEnabled).
+  bool get interstitialEnabled => _bool('interstitial_enabled');
 
-  /// true = debug behavior (test ads, logging, debug tools).
-  /// false = clean production behavior.
-  bool get isDebug => _bool('is_debug');
+  /// Rewarded switch (also requires adsEnabled).
+  bool get rewardedEnabled => _bool('rewarded_enabled');
+
+  // Real ad unit IDs from Remote Config.
+  String get interstitialIdAndroid => _string('interstitial_id_android');
+  String get interstitialIdIos => _string('interstitial_id_ios');
+  String get rewardedIdAndroid => _string('rewarded_id_android');
+  String get rewardedIdIos => _string('rewarded_id_ios');
 
   // ==================== Restarts ====================
 
