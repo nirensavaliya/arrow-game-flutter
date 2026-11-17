@@ -798,6 +798,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
                           width: 52,
@@ -811,7 +812,6 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                           ),
                           child: Icon(mode.icon, color: Colors.white, size: 27),
                         ),
-                        const Spacer(),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 11,

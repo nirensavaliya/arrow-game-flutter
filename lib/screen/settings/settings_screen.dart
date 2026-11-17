@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../../controller/game_controller.dart';
 import '../../controller/theme_controller.dart';
 import '../../modes/game_mode.dart';
+import '../../services/ads/banner_ad_service.dart';
 import '../../storage/game_storage.dart';
 import '../../storage/settings_storage.dart';
 import '../../services/vibration_service.dart';
@@ -103,6 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = Get.find<GameController>();
     return Obx(() {
       return Scaffold(
         backgroundColor: _background,
@@ -254,69 +256,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               onTap: () {},
                             ),
                           ]),
-
-                          const SizedBox(height: 30),
-
-                          // FOOTER
-                          Center(
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 43,
-                                  height: 43,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [_accent, _accentDeep],
-                                    ),
-                                    borderRadius: BorderRadius.circular(15),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: _accent.withValues(alpha: 0.25),
-                                        blurRadius: 15,
-                                        offset: const Offset(0, 5),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.route_rounded,
-                                    color: Colors.white,
-                                    size: 23,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  'ARROW MAZE',
-                                  style: TextStyle(
-                                    color: _ink,
-                                    fontSize: 12,
-                                    letterSpacing: 2,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                                const SizedBox(height: 5),
-                                Text(
-                                  'Think • Trace • Escape',
-                                  style: TextStyle(
-                                    color: _muted,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 7),
-                                Text(
-                                  'Version 1.0.0',
-                                  style: TextStyle(
-                                    color: _muted.withValues(alpha: 0.7),
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ],
                       ),
                     ),
                   ),
+                  // Banner ad at the very bottom
+                  if (c.canShowBanner)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 0),
+                      child: BannerAdService(),
+                    ),
                 ],
               ),
             ),

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
+import '../../controller/game_controller.dart';
+import '../../services/ads/banner_ad_service.dart';
 import 'level_design.dart';
 import '../game/game_screen.dart';
 import '../../storage/game_storage.dart';
@@ -101,7 +103,7 @@ class _LevelScreenState extends State<LevelScreen>
 
   // ───────────────────────── Segments ─────────────────────────
 
-  // 80 levels = 8 segments.
+  // 120 levels = 12 segments.
   // Keep these boundaries stable so saved level progress
   // continues to match the same segments.
 
@@ -163,6 +165,34 @@ class _LevelScreenState extends State<LevelScreen>
       subtitle: 'Conquer every challenge',
       icon: Icons.emoji_events_rounded,
       color: Color(0xFFFF6FAE),
+    ),
+    _LevelSegment(
+      number: 9,
+      title: 'Wild Kingdom',
+      subtitle: 'Face the animal challenges',
+      icon: Icons.pets_rounded,
+      color: Color(0xFF4DB6AC),
+    ),
+    _LevelSegment(
+      number: 10,
+      title: 'Nature’s Fury',
+      subtitle: 'Survive the natural obstacles',
+      icon: Icons.volcano_rounded,
+      color: Color(0xFFFF7043),
+    ),
+    _LevelSegment(
+      number: 11,
+      title: 'Mastermind Trials',
+      subtitle: 'Solve the ultimate puzzles',
+      icon: Icons.extension_rounded,
+      color: Color(0xFF9575CD),
+    ),
+    _LevelSegment(
+      number: 12,
+      title: 'Legendary Escape',
+      subtitle: 'Complete the final challenge',
+      icon: Icons.military_tech_rounded,
+      color: Color(0xFFFFCA55),
     ),
   ];
 
@@ -338,6 +368,7 @@ class _LevelScreenState extends State<LevelScreen>
   @override
   Widget build(BuildContext context) {
     final unlocked = _unlockedLevel;
+    final c = Get.find<GameController>();
 
     return Scaffold(
       backgroundColor: _bg,
@@ -368,6 +399,12 @@ class _LevelScreenState extends State<LevelScreen>
                     ],
                   ),
                 ),
+                // Banner ad at the very bottom
+                // if (c.canShowBanner)
+                //   const Padding(
+                //     padding: EdgeInsets.only(top: 0),
+                //     child: BannerAdService(),
+                //   ),
               ],
             ),
           ),
@@ -637,7 +674,7 @@ class _LevelScreenState extends State<LevelScreen>
                             color: Colors.white.withValues(alpha: 0.20),
                             borderRadius: BorderRadius.circular(17),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.32),
+                              color: Colors.white.withValues(alpha: 0.20),
                             ),
                           ),
                           child: const Icon(

@@ -21,11 +21,12 @@ class RemoteConfigService {
     // ==================== AD CONTROL ====================
 
     /// Master switch: false = no ads shown at all.
-    'ads_enabled': false,
+    'ads_enabled': '',
 
     /// Per-type switches (only matter when ads_enabled is true).
-    'interstitial_enabled': true,
-    'rewarded_enabled': true,
+    'interstitial_enabled': '',
+    'rewarded_enabled': '',
+    'banner_enabled': '',
 
     /// REAL ad unit IDs (used only in release builds).
     /// Leave empty here; set the real values in Firebase Console.
@@ -33,6 +34,24 @@ class RemoteConfigService {
     'interstitial_id_ios': '',
     'rewarded_id_android': '',
     'rewarded_id_ios': '',
+    'banner_id_android': '',
+    'banner_id_ios': '',
+
+    'test_interstitial_id_android': '',
+    'test_interstitial_id_ios': '',
+    'test_rewarded_id_android': '',
+    'test_rewarded_id_ios': '',
+    'test_banner_id_android': '',
+    'test_banner_id_ios': '',
+
+    // ==================== FORCE UPDATE ====================
+    // All empty on purpose. Set the real values in Firebase Console.
+
+    'force_update_enabled': '',
+    'min_version_android': '',
+    'min_version_ios': '',
+    'update_url_android': '',
+    'update_url_ios': '',
 
     // ==================== Restarts ====================
     'initial_restarts': 5,
@@ -67,7 +86,7 @@ class RemoteConfigService {
     await _remoteConfig.setConfigSettings(
       RemoteConfigSettings(
         fetchTimeout: const Duration(seconds: 10),
-        minimumFetchInterval: const Duration(hours: 1),
+        minimumFetchInterval: const Duration(seconds: 2),
       ),
     );
 
@@ -109,11 +128,44 @@ class RemoteConfigService {
   /// Rewarded switch (also requires adsEnabled).
   bool get rewardedEnabled => _bool('rewarded_enabled');
 
+
+  /// Banner switch (also requires adsEnabled).
+  bool get bannerEnabled => _bool('banner_enabled');
+
   // Real ad unit IDs from Remote Config.
   String get interstitialIdAndroid => _string('interstitial_id_android');
   String get interstitialIdIos => _string('interstitial_id_ios');
   String get rewardedIdAndroid => _string('rewarded_id_android');
   String get rewardedIdIos => _string('rewarded_id_ios');
+  String get bannerIdAndroid => _string('banner_id_android');
+  String get bannerIdIos => _string('banner_id_ios');
+
+
+
+  // Test ad unit IDs from Remote Config.
+  String get testInterstitialIdAndroid =>
+      _string('test_interstitial_id_android');
+
+  String get testInterstitialIdIos =>
+      _string('test_interstitial_id_ios');
+
+  String get testRewardedIdAndroid =>
+      _string('test_rewarded_id_android');
+
+  String get testRewardedIdIos =>
+      _string('test_rewarded_id_ios');
+  String get testBannerIdAndroid => _string('test_banner_id_android');
+  String get testBannerIdIos => _string('test_banner_id_ios');
+
+  // ==================== Force Update ====================
+
+  bool get forceUpdateEnabled => _bool('force_update_enabled');
+
+  String get minVersionAndroid => _string('min_version_android');
+  String get minVersionIos => _string('min_version_ios');
+
+  String get updateUrlAndroid => _string('update_url_android');
+  String get updateUrlIos => _string('update_url_ios');
 
   // ==================== Restarts ====================
 

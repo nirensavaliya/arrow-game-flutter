@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../services/force_update_service.dart';
+import '../../widgets/force_update_dialog.dart';
 import '../game/game_intro_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -36,8 +38,11 @@ class _SplashScreenState extends State<SplashScreen>
   ];
 
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
   Color get _bg => _isDark ? _darkBg : _lightBg;
+
   Color get _textPrimary => _isDark ? _darkTextPrimary : _lightTextPrimary;
+
   Color get _textSecondary =>
       _isDark ? _darkTextSecondary : _lightTextSecondary;
 
@@ -78,14 +83,24 @@ class _SplashScreenState extends State<SplashScreen>
     _color = _cycle(_colors);
     _colorDeep = _cycle(_colorsDeep);
 
-    _load.addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        Get.off(
-              () => const GameIntroScreen(),
-          transition: Transition.fadeIn,
-          duration: const Duration(milliseconds: 500),
-        );
+    _load.addStatusListener((status) async {
+      if (status != AnimationStatus.completed || !mounted) return;
+
+      final updateRequired =
+      await ForceUpdateService.instance.isUpdateRequired();
+      if (!mounted) return;
+
+      if (updateRequired) {
+        // Stay on splash, show a blocking dialog.
+        ForceUpdateDialog.show();
+        return;
       }
+
+      Get.off(
+            () => const GameIntroScreen(),
+        transition: Transition.fadeIn,
+        duration: const Duration(milliseconds: 500),
+      );
     });
   }
 
@@ -204,8 +219,9 @@ class _SplashScreenState extends State<SplashScreen>
         Positioned.fill(
           child: CustomPaint(
             painter: MazePainter(
-              color: (_isDark ? Colors.white : Colors.black)
-                  .withValues(alpha: _isDark ? 0.03 : 0.035),
+              color: (_isDark ? Colors.white : Colors.black).withValues(
+                alpha: _isDark ? 0.03 : 0.035,
+              ),
             ),
           ),
         ),
@@ -345,11 +361,7 @@ class MazePainter extends CustomPainter {
   final double cell;
   final int seed;
 
-  const MazePainter({
-    required this.color,
-    this.cell = 36,
-    this.seed = 11,
-  });
+  const MazePainter({required this.color, this.cell = 36, this.seed = 11});
 
   @override
   void paint(Canvas canvas, Size size) {

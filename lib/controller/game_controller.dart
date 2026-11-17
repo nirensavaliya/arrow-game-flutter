@@ -52,6 +52,7 @@ class GameController extends GetxController {
   bool get canShowAds => adsEnabled;
   bool get canShowInterstitial => AdConfig.interstitialEnabled;
   bool get canShowRewarded => AdConfig.rewardedEnabled;
+  bool get canShowBanner => AdConfig.bannerEnabled;
 
   /// Number of completed levels between interstitial opportunities.
   /// A value of 0 disables interstitial scheduling.
@@ -125,7 +126,8 @@ class GameController extends GetxController {
   // Hint system: values come from Firebase Remote Config.
   // Hints are earned by watching rewarded ads.
   int get hintsPerAd => _rc.hintsPerAd;
-
+  /// Ads are off → nothing to earn hints with, so hints are free and unlimited.
+  bool get hintsFree => !canShowRewarded;
   // ==================== RESTART LIMIT ====================
   // Values come from Firebase Remote Config.
   int get initialRestarts => _rc.initialRestarts;
@@ -294,36 +296,31 @@ class GameController extends GetxController {
   }
 
   /// Highlights a safe arrow for 3 seconds.
-  void showHint() {
-    if (isWon.value || isGameOver.value) return;
+  /// Highlights a safe arrow for 3 seconds. Returns true if a hint was shown.
+  bool showHint() {
+    if (isWon.value || isGameOver.value) return false;
 
-    if (hintsRemaining.value <= 0) {
+    if (!hintsFree && hintsRemaining.value <= 0) {
       Get.snackbar(
         'No Hints Left',
         'You have used all your hints.',
         snackPosition: SnackPosition.BOTTOM,
         duration: const Duration(seconds: 2),
       );
-      return;
+      return false;
     }
 
     // Cancel any previous hint.
     _hintTimer?.cancel();
     hintArrow.value = null;
 
-    // Find an active arrow with a clear exit path.
     ArrowModel? candidate;
 
     for (var i = 0; i < arrows.length; i++) {
       final arrow = arrows[i];
 
-      if (!arrow.isActive || arrow.isMoving || arrow.isBlocked) {
-        continue;
-      }
-
-      if (_isPathBlocked(i)) {
-        continue;
-      }
+      if (!arrow.isActive || arrow.isMoving || arrow.isBlocked) continue;
+      if (_isPathBlocked(i)) continue;
 
       candidate = arrow;
       break;
@@ -336,29 +333,30 @@ class GameController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
         duration: const Duration(seconds: 2),
       );
-      return;
+      return false;
     }
 
-    // Consume one hint and highlight the safe arrow.
-    hintsRemaining.value--;
+    // Only consume a hint when hints are limited (ads on).
+    if (!hintsFree) hintsRemaining.value--;
+
     _track(
       'hint_used',
       parameters: {
         'level': level.value,
         'mode': selectedMode.value.name,
-        'remaining_hints': hintsRemaining.value,
+        'remaining_hints': hintsFree ? -1 : hintsRemaining.value,
+        'free': hintsFree,
       },
     );
     hintArrow.value = candidate;
 
     VibrationService.success();
 
-    // Remove the highlight automatically after 3 seconds.
     _hintTimer = Timer(const Duration(seconds: 3), () {
-      if (!isClosed) {
-        hintArrow.value = null;
-      }
+      if (!isClosed) hintArrow.value = null;
     });
+
+    return true;
   }
 
   // Clears the current arrow highlight.
@@ -827,6 +825,10 @@ class GameController extends GetxController {
     (50, 12.0),
     (65, 14.0),
     (80, 16.0),
+    (90, 18.0),
+    (100, 20.0),
+    (110, 22.0),
+    (120, 24.0),
   ];
 
   // First level where the "many open arrows, but few of them useful" rule
@@ -919,7 +921,15 @@ class GameController extends GetxController {
   }
 
   /// Longest allowed arrow, in cells. Shorter arrows = more arrows = harder.
-  int _maxPathLength(int lvl) => (5 + lvl ~/ 4).clamp(5, 12).toInt();
+  int _maxPathLength(int lvl) {
+    if (lvl <= 80) {
+      return (5 + lvl ~/ 4).clamp(5, 12).toInt();
+    }
+
+    final reduction = (lvl - 80) ~/ 10;
+
+    return (12 - reduction).clamp(8, 12).toInt();
+  }
 
   /// Number of arrows whose exit ray touches no other arrow (free at start).
   int _countFreeArrows(List<List<int>> paths, int cols, int rows) {

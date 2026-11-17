@@ -772,34 +772,28 @@ class LevelDesign {
 // =============================================================================
 
 class LevelDesigns {
-  static const int totalLevels = 80;
+  static const int totalLevels = 120;
 
-  // Global difficulty multiplier for the arrow count (1.25 = 25% harder).
+  // Keep the existing difficulty multiplier.
   static const double difficultyBoost = 1.25;
 
   static const int minArrows = 3;
-  static const int maxArrows = 363; // 290 * 1.25, rounded
+  static const int maxArrows = 625;
   static const int tutorialArrows = 3;
 
-  // Interior holes begin once the player is in the Medium-Hard tier.
   static const int _holesFromLevel = 21;
 
-  // Board limits (long side, in cells).
   static const int _minSide = 6;
-  static const int _maxSide = 66;
 
-  // Average arrow length as a share of the longest allowed arrow. Follows the
-  // controller's 10% short / 55% medium / 35% long mix.
+  // Automatically larger boards for the new levels.
+  static const int _maxSide = 96;
+
   static const double _avgLengthShare = 0.62;
-
-  // Small extra room so the generator can fit every arrow, and a little more
-  // for Expert levels, whose thin parts waste some cells.
   static const double _slack = 1.05;
   static const double _expertSlack = 1.08;
 
   static bool isTutorial(int level) => level == 1;
 
-  /// Difficulty tier. The names match the ones used by the game controller.
   static String difficultyForLevel(int level) {
     final l = level.clamp(1, totalLevels).toInt();
 
@@ -811,12 +805,11 @@ class LevelDesigns {
     if (l <= 25) return 'Medium-Hard';
     if (l <= 35) return 'Hard';
     if (l <= 40) return 'Very Hard';
+    if (l <= 100) return 'Expert';
 
-    return 'Expert';
+    return 'Legendary';
   }
 
-  // (level, arrow count) key points. Values between them are interpolated,
-  // so the arrow count rises evenly with no jumps.
   static const List<(int, int)> _arrowKeys = [
     (1, 3),
     (2, 8),
@@ -832,6 +825,12 @@ class LevelDesigns {
     (60, 207),
     (70, 248),
     (80, 290),
+
+    // New progressive difficulty.
+    (90, 340),
+    (100, 395),
+    (110, 450),
+    (120, 500),
   ];
 
   static int arrowCountForLevel(int level) {
@@ -948,6 +947,24 @@ class LevelDesigns {
     'Hourglass',
     'Trophy',
     'Paw Print',
+    'Mountain',
+    'Lightning',
+    'Yin Yang',
+    'Checkerboard',
+    'Diamond Ring',
+    'Guitar',
+    'Airplane',
+    'Helicopter',
+    'Anchor',
+    'Chess Knight',
+    'Music Note',
+    'Puzzle Piece',
+    'Phoenix',
+    'Griffin',
+    'Legendary Sword',
+    'Snake',
+    'Scorpion',
+    'Flamingo',
   };
 
   // 79 designs: level 2 = index 0 ... level 80 = index 78.
@@ -1046,6 +1063,50 @@ class LevelDesigns {
     ('Skull', 'Object'), // 78
     ('Temple', 'Object'), // 79
     ('Train', 'Object'), // 80
+    // ---- Levels 81–90: new animals ----
+    ('Lion', 'Animal'), // 81
+    ('Wolf', 'Animal'), // 82
+    ('Giraffe', 'Animal'), // 83
+    ('Dolphin', 'Animal'), // 84
+    ('Shark', 'Animal'), // 85
+    ('Bat', 'Animal'), // 86
+    ('Scorpion', 'Animal'), // 87
+    ('Flamingo', 'Animal'), // 88
+    ('Kangaroo', 'Animal'), // 89
+    ('Snake', 'Animal'), // 90
+    // ---- Levels 91–100: nature and patterns ----
+    ('Mountain', 'Nature'), // 91
+    ('Volcano', 'Nature'), // 92
+    ('Mushroom House', 'Nature'), // 93
+    ('Leaf', 'Nature'), // 94
+    ('Pine Cone', 'Nature'), // 95
+    ('Lightning', 'Shape'), // 96
+    ('Yin Yang', 'Pattern'), // 97
+    ('Checkerboard', 'Pattern'), // 98
+    ('Target', 'Pattern'), // 99
+    ('Diamond Ring', 'Object'), // 100
+    // ---- Levels 101–110: legendary objects ----
+    ('Guitar', 'Object'), // 101
+    ('Piano', 'Object'), // 102
+    ('Camera', 'Object'), // 103
+    ('Airplane', 'Object'), // 104
+    ('Helicopter', 'Object'), // 105
+    ('Anchor', 'Object'), // 106
+    ('Ship', 'Object'), // 107
+    ('Robot', 'Object'), // 108
+    ('Chess Knight', 'Object'), // 109
+    ('Rocket Ship', 'Object'), // 110
+    // ---- Levels 111–120: final challenge ----
+    ('Chess Queen', 'Object'), // 111
+    ('Crown Jewel', 'Object'), // 112
+    ('Music Note', 'Symbol'), // 113
+    ('Puzzle Piece', 'Shape'), // 114
+    ('Snowman', 'Nature'), // 115
+    ('Fire', 'Nature'), // 116
+    ('Dragon Head', 'Animal'), // 117
+    ('Phoenix', 'Animal'), // 118
+    ('Griffin', 'Animal'), // 119
+    ('Legendary Sword', 'Object'), // 120
   ];
 
   static int _recipeIndex(int level) =>
@@ -1803,6 +1864,368 @@ class LevelDesigns {
                   _ell(x, y, -0.15, 0.55, 0.22, 0.22) ||
                   _ell(x, y, 0.55, 0.55, 0.25, 0.25)) &&
               !_rect(x, y, 0.42, -0.5, 0.7, -0.2);
+
+        // ======================= LEVELS 81–90 =======================
+
+        case 'Lion':
+          return (_ell(x, y, 0, 0.05, 0.72, 0.72) ||
+                  _petals(x, y, 12, 0.76, 0.19)) &&
+              !_ell(x, y, 0, -0.05, 0.12, 0.12);
+
+        case 'Wolf':
+          return _poly(x, y, [
+                (-0.75, -0.2),
+                (-0.65, -0.85),
+                (-0.15, -0.55),
+                (0.25, -0.7),
+                (0.75, -0.9),
+                (0.7, -0.2),
+                (0.95, 0.15),
+                (0.55, 0.75),
+                (0, 0.95),
+                (-0.65, 0.55),
+              ]) ||
+              _ell(x, y, 0, 0.05, 0.7, 0.55);
+
+        case 'Giraffe':
+          return _ell(x, y, 0, 0.48, 0.42, 0.48) ||
+              _rrect(x, y, -0.22, -0.55, 0.22, 0.4, 0.14) ||
+              _ell(x, y, 0, -0.62, 0.35, 0.3) ||
+              _seg(x, y, -0.2, -0.8, -0.3, -0.98, 0.045) ||
+              _seg(x, y, 0.2, -0.8, 0.3, -0.98, 0.045);
+
+        case 'Dolphin':
+          return _ell(x, y, -0.05, 0.05, 0.8, 0.4) ||
+              _poly(x, y, [(0.55, 0.05), (0.98, -0.3), (0.88, 0.2)]) ||
+              _poly(x, y, [(-0.1, -0.3), (0.25, -0.75), (0.42, -0.2)]) ||
+              _poly(x, y, [(-0.25, 0.25), (0.1, 0.75), (0.35, 0.25)]);
+
+        case 'Shark':
+          return _ell(x, y, -0.05, 0.05, 0.78, 0.42) ||
+              _poly(x, y, [
+                (0.55, 0.0),
+                (0.98, -0.55),
+                (0.9, 0.0),
+                (0.98, 0.55),
+              ]) ||
+              _poly(x, y, [(-0.2, -0.3), (0.05, -0.85), (0.35, -0.25)]) ||
+              _poly(x, y, [(-0.2, 0.25), (0.05, 0.65), (0.35, 0.25)]);
+
+        case 'Bat':
+          return _ell(x, y, 0, 0.05, 0.25, 0.45) ||
+              _poly(x, y, [
+                (-0.2, -0.1),
+                (-0.95, -0.85),
+                (-0.82, 0.45),
+                (-0.4, 0.18),
+                (-0.1, 0.65),
+              ]) ||
+              _poly(x, y, [
+                (0.2, -0.1),
+                (0.95, -0.85),
+                (0.82, 0.45),
+                (0.4, 0.18),
+                (0.1, 0.65),
+              ]);
+
+        case 'Scorpion':
+          return _ell(x, y, 0, 0.5, 0.38, 0.35) ||
+              _seg(x, y, 0, 0.25, 0.15, -0.2, 0.13) ||
+              _seg(x, y, 0.15, -0.2, 0.5, -0.45, 0.12) ||
+              _seg(x, y, 0.5, -0.45, 0.75, -0.75, 0.1) ||
+              _seg(x, y, 0.75, -0.75, 0.5, -0.98, 0.09) ||
+              _seg(ax, y, 0.2, 0.4, 0.75, 0.05, 0.07) ||
+              _seg(ax, y, 0.2, 0.65, 0.75, 0.9, 0.07);
+
+        case 'Flamingo':
+          return _ell(x, y, -0.15, 0.25, 0.42, 0.3) ||
+              _seg(x, y, 0.1, 0.15, 0.25, -0.55, 0.1) ||
+              _ell(x, y, 0.25, -0.62, 0.2, 0.16) ||
+              _seg(x, y, 0.35, -0.6, 0.72, -0.55, 0.045) ||
+              _seg(x, y, -0.2, 0.48, -0.4, 0.98, 0.045) ||
+              _seg(x, y, 0.05, 0.48, 0.15, 0.98, 0.045);
+
+        case 'Kangaroo':
+          return _ell(x, y, -0.05, 0.25, 0.45, 0.55) ||
+              _ell(x, y, 0.25, -0.4, 0.25, 0.3) ||
+              _ell(x, y, 0.2, -0.8, 0.12, 0.24) ||
+              _ell(x, y, 0.48, -0.78, 0.12, 0.25) ||
+              _seg(x, y, -0.35, 0.4, -0.9, 0.85, 0.12) ||
+              _seg(x, y, -0.25, 0.65, -0.55, 0.98, 0.09) ||
+              _seg(x, y, 0.1, 0.55, 0.45, 0.95, 0.09);
+
+        case 'Snake':
+          return _seg(x, y, -0.85, 0.75, -0.45, 0.35, 0.14) ||
+              _seg(x, y, -0.45, 0.35, 0.35, 0.45, 0.14) ||
+              _seg(x, y, 0.35, 0.45, 0.65, -0.05, 0.14) ||
+              _seg(x, y, 0.65, -0.05, 0.2, -0.45, 0.14) ||
+              _ell(x, y, 0.05, -0.55, 0.22, 0.18);
+
+        // ======================= LEVELS 91–100 ======================
+
+        case 'Mountain':
+          return _poly(x, y, [
+            (-0.98, 0.85),
+            (-0.55, -0.25),
+            (-0.25, 0.1),
+            (0.25, -0.95),
+            (0.98, 0.85),
+          ]);
+
+        case 'Volcano':
+          return _poly(x, y, [
+                (-0.95, 0.9),
+                (-0.4, -0.4),
+                (-0.2, -0.25),
+                (0, -0.65),
+                (0.2, -0.25),
+                (0.4, -0.4),
+                (0.95, 0.9),
+              ]) ||
+              _ell(x, y, 0, -0.65, 0.35, 0.12);
+
+        case 'Mushroom House':
+          return (_rrect(x, y, -0.55, -0.1, 0.55, 0.85, 0.12) ||
+                  (_ell(x, y, 0, -0.25, 0.95, 0.55) && y < -0.1)) &&
+              !_rrect(x, y, -0.15, 0.4, 0.15, 0.85, 0.04);
+
+        case 'Leaf':
+          return _ell(x, y, 0, 0, 0.5, 0.95) &&
+              _seg(x, y, -0.42, 0.65, 0.42, -0.65, 0.035);
+
+        case 'Pine Cone':
+          return _poly(x, y, [
+                (0, -0.98),
+                (0.72, -0.45),
+                (0.88, 0.45),
+                (0.55, 0.9),
+                (-0.55, 0.9),
+                (-0.88, 0.45),
+                (-0.72, -0.45),
+              ]) ||
+              _seg(x, y, -0.5, -0.35, 0.5, 0.35, 0.05);
+
+        case 'Lightning':
+          return _poly(x, y, [
+            (0.12, -0.98),
+            (-0.72, 0.05),
+            (-0.12, 0.05),
+            (-0.35, 0.98),
+            (0.78, -0.25),
+            (0.18, -0.25),
+          ]);
+
+        case 'Yin Yang':
+          return _ell(x, y, 0, 0, 0.95, 0.95);
+
+        case 'Checkerboard':
+          return r <= 0.95 && (((x * 8).floor() + (y * 8).floor()) % 2 == 0);
+
+        case 'Target':
+          return _ring(x, y, 0.95, 0.72) || _ring(x, y, 0.58, 0.35) || r <= 0.2;
+
+        case 'Diamond Ring':
+          return _ring(x, y + 0.3, 0.62, 0.4) ||
+              _poly(x, y, [
+                (0, -0.98),
+                (0.65, -0.45),
+                (0, 0.05),
+                (-0.65, -0.45),
+              ]);
+
+        // ======================= LEVELS 101–110 =====================
+
+        case 'Guitar':
+          return _ell(x, y, 0, 0.48, 0.58, 0.48) ||
+              _ell(x, y, 0, -0.05, 0.42, 0.4) ||
+              _rrect(x, y, -0.13, -0.85, 0.13, 0.15, 0.06) ||
+              _rrect(x, y, -0.2, -0.98, 0.2, -0.75, 0.04);
+
+        case 'Piano':
+          return _rrect(x, y, -0.95, -0.5, 0.95, 0.75, 0.12) ||
+              _rrect(x, y, -0.85, -0.85, 0.85, -0.48, 0.05);
+
+        case 'Camera':
+          return _rrect(x, y, -0.9, -0.55, 0.9, 0.65, 0.16) ||
+              _rrect(x, y, -0.45, -0.8, 0.25, -0.55, 0.05) ||
+              _ring(x, y, 0.42, 0.23);
+
+        case 'Airplane':
+          return _poly(x, y, [
+            (0, -0.98),
+            (0.16, -0.2),
+            (0.95, 0.35),
+            (0.95, 0.55),
+            (0.16, 0.35),
+            (0.22, 0.85),
+            (0, 0.98),
+            (-0.22, 0.85),
+            (-0.16, 0.35),
+            (-0.95, 0.55),
+            (-0.95, 0.35),
+            (-0.16, -0.2),
+          ]);
+
+        case 'Helicopter':
+          return _ell(x, y, 0, 0.15, 0.6, 0.35) ||
+              _seg(x, y, 0.5, 0.1, 0.95, -0.15, 0.06) ||
+              _seg(x, y, 0.9, -0.28, 0.9, 0.0, 0.06) ||
+              _seg(x, y, -0.95, -0.35, 0.95, -0.35, 0.045) ||
+              _seg(x, y, 0, -0.35, 0, -0.55, 0.04) ||
+              _seg(x, y, -0.45, 0.55, 0.45, 0.55, 0.05);
+
+        case 'Anchor':
+          return _ring(x, y, 0.3, 0.16) ||
+              _seg(x, y, 0, -0.65, 0, 0.72, 0.1) ||
+              _seg(x, y, -0.8, 0.35, 0.8, 0.35, 0.09) ||
+              _seg(x, y, -0.8, 0.35, -0.65, 0.8, 0.09) ||
+              _seg(x, y, 0.8, 0.35, 0.65, 0.8, 0.09) ||
+              _seg(x, y, -0.65, 0.8, 0, 0.98, 0.09) ||
+              _seg(x, y, 0, 0.98, 0.65, 0.8, 0.09);
+
+        case 'Ship':
+          return _poly(x, y, [
+                (-0.95, 0.15),
+                (0.95, 0.15),
+                (0.65, 0.75),
+                (-0.65, 0.75),
+              ]) ||
+              _rect(x, y, -0.08, -0.9, 0.08, 0.15) ||
+              _poly(x, y, [(0.12, -0.82), (0.12, 0.05), (0.85, 0.05)]) ||
+              _poly(x, y, [(-0.12, -0.55), (-0.12, 0.05), (-0.75, 0.05)]);
+
+        case 'Robot':
+          return _rrect(x, y, -0.55, -0.35, 0.55, 0.55, 0.12) ||
+              _rrect(x, y, -0.45, -0.95, 0.45, -0.35, 0.1) ||
+              _seg(x, y, -0.8, -0.05, -0.55, -0.05, 0.08) ||
+              _seg(x, y, 0.55, -0.05, 0.8, -0.05, 0.08) ||
+              _rrect(x, y, -0.45, 0.55, -0.2, 0.95, 0.05) ||
+              _rrect(x, y, 0.2, 0.55, 0.45, 0.95, 0.05);
+
+        case 'Chess Knight':
+          return _poly(x, y, [
+            (-0.65, 0.9),
+            (-0.55, 0.45),
+            (-0.75, 0.05),
+            (-0.5, -0.5),
+            (-0.15, -0.95),
+            (0.15, -0.55),
+            (0.55, -0.45),
+            (0.35, -0.05),
+            (0.65, 0.45),
+            (0.75, 0.9),
+          ]);
+
+        case 'Rocket Ship':
+          return (_ell(x, y, 0, -0.05, 0.35, 0.78) ||
+                  _poly(x, y, [(-0.3, 0.4), (-0.75, 0.85), (-0.25, 0.7)]) ||
+                  _poly(x, y, [(0.3, 0.4), (0.75, 0.85), (0.25, 0.7)]) ||
+                  _poly(x, y, [(-0.15, 0.6), (0, 0.98), (0.15, 0.6)])) &&
+              !_ell(x, y, 0, -0.25, 0.13, 0.13);
+
+        // ======================= LEVELS 111–120 =====================
+
+        case 'Chess Queen':
+          return _rrect(x, y, -0.7, 0.55, 0.7, 0.85, 0.08) ||
+              _poly(x, y, [
+                (-0.65, 0.55),
+                (-0.9, -0.35),
+                (-0.4, 0.0),
+                (0, -0.75),
+                (0.4, 0.0),
+                (0.9, -0.35),
+                (0.65, 0.55),
+              ]) ||
+              _petals(x, y, 5, 0.75, 0.12);
+
+        case 'Crown Jewel':
+          return _starPoly(x, y, 8, 0.95, 0.58) ||
+              _regular(x, y, 6, 0.55, rot: 0);
+
+        case 'Music Note':
+          return _seg(x, y, 0.25, -0.9, 0.25, 0.55, 0.09) ||
+              _seg(x, y, 0.25, -0.9, 0.8, -0.75, 0.08) ||
+              _ell(x, y, -0.05, 0.6, 0.3, 0.2) ||
+              _ell(x, y, 0.45, 0.45, 0.3, 0.2);
+
+        case 'Puzzle Piece':
+          return _rrect(x, y, -0.75, -0.75, 0.75, 0.75, 0.16) ||
+              _ell(x, y, 0, -0.75, 0.22, 0.22) ||
+              _ell(x, y, 0.75, 0, 0.22, 0.22) ||
+              _ell(x, y, 0, 0.75, 0.22, 0.22);
+
+        case 'Snowman':
+          return _ell(x, y, 0, 0.45, 0.55, 0.52) ||
+              _ell(x, y, 0, -0.3, 0.38, 0.38) ||
+              _rrect(x, y, -0.35, -0.85, 0.35, -0.65, 0.04) ||
+              _rrect(x, y, -0.22, -0.98, 0.22, -0.85, 0.03);
+
+        case 'Fire':
+          return _poly(x, y, [
+                (-0.8, 0.85),
+                (-0.95, 0.2),
+                (-0.55, -0.2),
+                (-0.45, -0.75),
+                (0, -0.35),
+                (0.35, -0.98),
+                (0.55, -0.3),
+                (0.95, 0.2),
+                (0.8, 0.85),
+              ]) ||
+              _ell(x, y, 0, 0.55, 0.32, 0.35);
+
+        case 'Dragon Head':
+          return (_ell(x, y, 0, 0.05, 0.72, 0.68) ||
+                  _poly(x, y, [(-0.6, -0.4), (-0.95, -0.95), (-0.2, -0.65)]) ||
+                  _poly(x, y, [(0.6, -0.4), (0.95, -0.95), (0.2, -0.65)]) ||
+                  _poly(x, y, [(-0.2, 0.2), (0, 0.75), (0.2, 0.2)])) &&
+              !_ell(x, y, 0, -0.1, 0.12, 0.1);
+
+        case 'Phoenix':
+          return _ell(x, y, 0, 0.1, 0.2, 0.65) ||
+              _poly(x, y, [
+                (0, -0.3),
+                (0.35, -0.85),
+                (0.2, -0.15),
+                (0.95, -0.55),
+                (0.55, 0.2),
+                (0.2, 0.35),
+              ]) ||
+              _poly(x, y, [
+                (0, -0.3),
+                (-0.35, -0.85),
+                (-0.2, -0.15),
+                (-0.95, -0.55),
+                (-0.55, 0.2),
+                (-0.2, 0.35),
+              ]) ||
+              _poly(x, y, [(-0.2, 0.5), (0, 0.98), (0.2, 0.5)]);
+
+        case 'Griffin':
+          return _ell(x, y, -0.1, 0.25, 0.55, 0.45) ||
+              _ell(x, y, 0.45, -0.35, 0.35, 0.35) ||
+              _poly(x, y, [(0.6, -0.35), (0.98, -0.2), (0.6, -0.05)]) ||
+              _poly(x, y, [(-0.4, 0.0), (-0.95, -0.65), (-0.25, -0.4)]) ||
+              _seg(x, y, -0.35, 0.5, -0.5, 0.95, 0.09) ||
+              _seg(x, y, 0.2, 0.5, 0.35, 0.95, 0.09);
+
+        case 'Legendary Sword':
+          return _poly(x, y, [
+                (0, -0.98),
+                (0.2, -0.55),
+                (0.12, 0.35),
+                (0.55, 0.48),
+                (0.55, 0.62),
+                (0.12, 0.55),
+                (0.12, 0.82),
+                (-0.12, 0.82),
+                (-0.12, 0.55),
+                (-0.55, 0.62),
+                (-0.55, 0.48),
+                (-0.12, 0.35),
+                (-0.2, -0.55),
+              ]) ||
+              _rrect(x, y, -0.16, 0.78, 0.16, 0.98, 0.05);
 
         default:
           return r < 0.8;

@@ -107,6 +107,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late final InterstitialAdService _interstitialAdService;
 
   late int _prevWrongClicks;
+
   // Show an interstitial every N levels (N comes from Firebase Remote Config,
   // key: interstitial_every_levels, default 5).
   int get _adEveryLevels =>
@@ -473,29 +474,23 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void _onHint(GameController c) {
     if (c.isWon.value || c.isGameOver.value) return;
 
-    // Has a hint: use it. No hints: show the rewarded ad straight away.
-    if (c.hintsRemaining.value > 0) {
+    // Free (ads off) or has hints: use one.
+    if (c.hintsFree || c.hintsRemaining.value > 0) {
       _tapFeedback();
-      c.showHint();
-      _showPop(
-        icon: Icons.lightbulb_rounded,
-        color: const Color(0xFFFFB300),
-        big: 'HINT',
-        compact: true,
-      );
-    } else {
-      // _onHint
-      if (!c.canShowRewarded) {
-        Get.snackbar(
-          'No hints available',
-          'You have used all your hints.',
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 2),
+
+      if (c.showHint()) {
+        _showPop(
+          icon: Icons.lightbulb_rounded,
+          color: const Color(0xFFFFB300),
+          big: 'HINT',
+          compact: true,
         );
-        return;
       }
-      _watchAdForHint(c);
+      return;
     }
+
+    // Ads on, no hints left: offer the rewarded ad.
+    _watchAdForHint(c);
   }
 
   // Tap sound (respects the "System Tap Sound" setting) + vibration.
@@ -609,6 +604,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       onClosedWithoutReward: () {},
     );
   }
+
   void _onRestartTap(GameController c) {
     // Has restarts: use one and restart.
     if (c.consumeRestart()) {
@@ -807,8 +803,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
       _wrongClicksWorker = ever<int>(c.wrongClicks, (value) {
         if (value > _prevWrongClicks &&
-            (_mode == GameMode.timedChallenge ||
-                _mode == GameMode.speedRun)) {
+            (_mode == GameMode.timedChallenge || _mode == GameMode.speedRun)) {
           _resetCombo();
 
           if (mounted) {
@@ -900,6 +895,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
+
+
               ],
             ),
           ),
@@ -1025,11 +1022,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 onHome: () => Get.until((route) => route.isFirst),
 
                 // Show the rewarded-ad button only after all hearts are lost.
-                onWatchAd: !won && c.canShowRewarded ? () => _watchRewardedAd(c) : null,
+                onWatchAd: !won && c.canShowRewarded
+                    ? () => _watchRewardedAd(c)
+                    : null,
 
                 bonusClaimed: c.bonusClaimed.value,
-                onWatchAdBonus: won && c.canShowRewarded ? (m) => _watchAdForBonus(c, m) : null,
-
+                onWatchAdBonus: won && c.canShowRewarded
+                    ? (m) => _watchAdForBonus(c, m)
+                    : null,
               ),
             );
           }),
@@ -1302,7 +1302,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 12, 10),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
               child: Row(
                 spacing: 10,
                 children: [
@@ -1697,7 +1697,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             _DockButton(
               icon: Icons.lightbulb_rounded,
               color: const Color(0xFFFFB300),
-              badge: remaining > 0 ? '$remaining' : 'AD',
+              badge: c.hintsFree ? null : (remaining > 0 ? '$remaining' : 'AD'),
               badgeColor: remaining > 0 ? _modeColor : _red,
               onTap: () => _onHint(c),
             ),
@@ -2641,6 +2641,11 @@ class _GlassIconButtonState extends State<_GlassIconButton> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final badgeTextColor = widget.badgeColor.computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) => _set(true),
@@ -2652,60 +2657,67 @@ class _GlassIconButtonState extends State<_GlassIconButton> {
         duration: const Duration(milliseconds: 70),
         curve: Curves.easeOut,
         child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: widget.size,
-            height: widget.size,
-            decoration: BoxDecoration(
-              color: widget.glass,
-              shape: BoxShape.circle,
-              border: Border.all(color: widget.border),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.color.withValues(alpha: 0.12),
-                  blurRadius: 14,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Center(
-              child: AnimatedRotation(
-                turns: widget.turns,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutCubic,
-                child: Icon(widget.icon, size: widget.iconSize, color: widget.color),
-              ),
-            ),
-          ),
-          if (widget.badge != null)
-            Positioned(
-              top: -3,
-              right: -3,
-              child: Container(
-                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                padding: const EdgeInsets.symmetric(horizontal: 3),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: widget.badgeColor,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    width: 1.2,
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: widget.size,
+              height: widget.size,
+              decoration: BoxDecoration(
+                color: widget.glass,
+                shape: BoxShape.circle,
+                border: Border.all(color: widget.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.color.withValues(alpha: 0.12),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
                   ),
-                ),
-                child: Text(
-                  widget.badge!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
+                ],
+              ),
+              child: Center(
+                child: AnimatedRotation(
+                  turns: widget.turns,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  child: Icon(
+                    widget.icon,
+                    size: widget.iconSize,
+                    color: widget.color,
                   ),
                 ),
               ),
             ),
-        ],
-      ),
+            if (widget.badge != null)
+              Positioned(
+                top: -3,
+                right: -3,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 20,
+                    minHeight: 20,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: widget.badgeColor,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.surface,
+                      width: isDark ? 1.2 : 1.2,
+                    ),
+                  ),
+                  child: Text(
+                    widget.badge!,
+                    style: TextStyle(
+                      color: badgeTextColor,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -2742,6 +2754,11 @@ class _DockButtonState extends State<_DockButton> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final badgeTextColor = widget.badgeColor.computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) => _set(true),
@@ -2801,8 +2818,8 @@ class _DockButtonState extends State<_DockButton> {
                   right: -4,
                   child: Container(
                     constraints: const BoxConstraints(
-                      minWidth: 19,
-                      minHeight: 19,
+                      minWidth: 20,
+                      minHeight: 20,
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 3),
                     alignment: Alignment.center,
@@ -2811,8 +2828,8 @@ class _DockButtonState extends State<_DockButton> {
                       shape: BoxShape.rectangle,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        width: 1.2,
+                        color: Theme.of(context).colorScheme.surface,
+                        width: isDark ? 1.2 : 1.2,
                       ),
                     ),
                     child: Text(
