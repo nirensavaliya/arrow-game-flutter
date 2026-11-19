@@ -31,8 +31,8 @@ android {
         applicationId = "com.app.arrow.escape"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = 4
-        versionName = "1.0.0"
+        versionCode = 5
+        versionName = "1.0.1"
     }
 
     signingConfigs {

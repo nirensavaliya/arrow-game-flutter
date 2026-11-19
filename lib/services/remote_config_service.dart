@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 /// Centralized Firebase Remote Config for Arrow Escape.
 ///
@@ -12,6 +15,8 @@ class RemoteConfigService {
   static final RemoteConfigService instance = RemoteConfigService._();
 
   FirebaseRemoteConfig get _remoteConfig => FirebaseRemoteConfig.instance;
+
+  String _appVersion = '';
 
   bool _initialized = false;
 
@@ -43,6 +48,13 @@ class RemoteConfigService {
     'test_rewarded_id_ios': '',
     'test_banner_id_android': '',
     'test_banner_id_ios': '',
+
+    // Ads are shown only if app version is within [min, max] (inclusive).
+    // Empty = no limit. Format: 1.2.3
+    'ads_min_version_android': '',
+    'ads_max_version_android': '',
+    'ads_min_version_ios': '',
+    'ads_max_version_ios': '',
 
     // ==================== FORCE UPDATE ====================
     // All empty on purpose. Set the real values in Firebase Console.
@@ -90,6 +102,12 @@ class RemoteConfigService {
       ),
     );
 
+
+    try {
+      final info = await PackageInfo.fromPlatform();
+      _appVersion = info.version; // e.g. 1.0.5 (without build number)
+    } catch (_) {}
+
     try {
       await _remoteConfig.fetchAndActivate();
     } catch (error) {
@@ -117,10 +135,45 @@ class RemoteConfigService {
       ? _remoteConfig.getString(key).trim()
       : (_defaults[key] as String).trim();
 
+  // ==================== Ads version range ====================
+
+  String get adsMinVersion => Platform.isIOS
+      ? _string('ads_min_version_ios')
+      : _string('ads_min_version_android');
+
+  String get adsMaxVersion => Platform.isIOS
+      ? _string('ads_max_version_ios')
+      : _string('ads_max_version_android');
+
+  /// Returns <0 if a<b, 0 if equal, >0 if a>b.
+  int _compareVersions(String a, String b) {
+    final pa = a.split('.').map((e) => int.tryParse(e.trim()) ?? 0).toList();
+    final pb = b.split('.').map((e) => int.tryParse(e.trim()) ?? 0).toList();
+    final len = pa.length > pb.length ? pa.length : pb.length;
+    for (var i = 0; i < len; i++) {
+      final x = i < pa.length ? pa[i] : 0;
+      final y = i < pb.length ? pb[i] : 0;
+      if (x != y) return x.compareTo(y);
+    }
+    return 0;
+  }
+
+  /// True if the current app version is inside [min, max].
+  bool get adsAllowedForCurrentVersion {
+    if (_appVersion.isEmpty) return true; // can't detect -> don't block
+    final min = adsMinVersion;
+    final max = adsMaxVersion;
+    if (min.isNotEmpty && _compareVersions(_appVersion, min) < 0) return false;
+    if (max.isNotEmpty && _compareVersions(_appVersion, max) > 0) return false;
+    return true;
+  }
+
   // ==================== AD CONTROL ====================
 
   /// Master switch: if false, NO ads are shown anywhere in the app.
-  bool get adsEnabled => _bool('ads_enabled');
+  /// Master switch + version range.
+  bool get adsEnabled =>
+      _bool('ads_enabled') && adsAllowedForCurrentVersion;
 
   /// Interstitial switch (also requires adsEnabled).
   bool get interstitialEnabled => _bool('interstitial_enabled');
