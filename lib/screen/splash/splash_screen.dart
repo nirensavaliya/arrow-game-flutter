@@ -1,7 +1,9 @@
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../services/force_update_service.dart';
 import '../../widgets/force_update_dialog.dart';
@@ -14,84 +16,134 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin {
-  // Same palette as GameIntroScreen
-  static const Color _darkBg = Color(0xFF07080F);
-  static const Color _darkTextPrimary = Color(0xFFF7F7FC);
-  static const Color _darkTextSecondary = Color(0xFF8E92AB);
+class _SplashScreenState extends State<SplashScreen> {
+  static const String _darkVideoPath =
+      'assets/videos/splash_video.mp4';
 
-  static const Color _lightBg = Color(0xFFF4F5FA);
-  static const Color _lightTextPrimary = Color(0xFF14162A);
-  static const Color _lightTextSecondary = Color(0xFF6F7390);
+  static const String _lightVideoPath =
+      'assets/videos/splash_video_light.mp4';
 
-  // Mode colors (Normal -> Timed -> Speed Run)
-  static const List<Color> _colors = [
-    Color(0xFF8175FF),
-    Color(0xFFFFB34F),
-    Color(0xFF35D68A),
-  ];
-  static const List<Color> _colorsDeep = [
-    Color(0xFF4B3FD1),
-    Color(0xFFD9681C),
-    Color(0xFF0C7F52),
-  ];
+  static const Color _darkBackground = Color(0xFF0B1030);
+  static const Color _lightBackground = Color(0xFFF4F5FA);
 
-  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  static const Color _darkPrimaryText = Color(0xFFF7F7FC);
+  static const Color _lightPrimaryText = Color(0xFF14162A);
 
-  Color get _bg => _isDark ? _darkBg : _lightBg;
+  static const Color _darkSecondaryText = Color(0xFF8E92AB);
+  static const Color _lightSecondaryText = Color(0xFF6F7390);
 
-  Color get _textPrimary => _isDark ? _darkTextPrimary : _lightTextPrimary;
+  late final VideoPlayerController _videoController;
 
-  Color get _textSecondary =>
-      _isDark ? _darkTextSecondary : _lightTextSecondary;
+  late final Future<bool> _updateCheckFuture;
 
-  late final AnimationController _intro;
-  late final AnimationController _ambient;
-  late final AnimationController _load;
+  bool _isLightTheme = false;
+  bool _isVideoReady = false;
+  bool _navigationStarted = false;
+  bool _videoFailed = false;
+  bool _videoInitializationStarted = false;
 
-  late final Animation<double> _logoScale;
-  late final Animation<Color?> _color;
-  late final Animation<Color?> _colorDeep;
+  String get _videoPath =>
+      _isLightTheme ? _lightVideoPath : _darkVideoPath;
+
+  Color get _background =>
+      _isLightTheme ? Colors.white : _darkBackground;
+
+  Color get _primaryText =>
+      _isLightTheme ? _lightPrimaryText : _darkPrimaryText;
+
+  Color get _secondaryText =>
+      _isLightTheme ? _lightSecondaryText : _darkSecondaryText;
 
   @override
   void initState() {
     super.initState();
 
-    _intro = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 850),
-    )..forward();
+    // Start force update check while the splash video plays.
+    _updateCheckFuture =
+        ForceUpdateService.instance.isUpdateRequired();
+  }
 
-    _ambient = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 7),
-    )..repeat(reverse: true);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
 
-    _load = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2800),
-    )..forward();
+    if (_videoInitializationStarted) return;
 
-    _logoScale = Tween<double>(begin: 0.7, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _intro,
-        curve: const Interval(0.0, 0.9, curve: Curves.elasticOut),
-      ),
-    );
+    _videoInitializationStarted = true;
 
-    _color = _cycle(_colors);
-    _colorDeep = _cycle(_colorsDeep);
+    // Detect the current application theme.
+    _isLightTheme =
+        Theme.of(context).brightness == Brightness.light;
 
-    _load.addStatusListener((status) async {
-      if (status != AnimationStatus.completed || !mounted) return;
+    _initializeVideo();
+  }
 
-      final updateRequired =
-      await ForceUpdateService.instance.isUpdateRequired();
+  Future<void> _initializeVideo() async {
+    _videoController = VideoPlayerController.asset(_videoPath);
+
+    try {
+      await _videoController.initialize();
+
+      if (!mounted) return;
+
+      await _videoController.setLooping(false);
+      await _videoController.setVolume(0);
+
+      _videoController.addListener(_videoListener);
+
+      setState(() {
+        _isVideoReady = true;
+      });
+
+      await _videoController.play();
+    } catch (e) {
+      debugPrint('Splash video initialization failed: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _videoFailed = true;
+      });
+
+      // No timer-based navigation.
+      // Navigation happens only after the video finishes.
+    }
+  }
+
+  void _videoListener() {
+    if (!_videoController.value.isInitialized ||
+        _navigationStarted) {
+      return;
+    }
+
+    final value = _videoController.value;
+
+    if (value.hasError) {
+      debugPrint(
+        'Splash video error: ${value.errorDescription}',
+      );
+      return;
+    }
+
+    // Navigate only after the video finishes.
+    if (value.position >= value.duration &&
+        !value.isPlaying) {
+      _checkForceUpdate();
+    }
+  }
+
+  Future<void> _checkForceUpdate() async {
+    if (_navigationStarted || !mounted) return;
+
+    _navigationStarted = true;
+
+    try {
+      // Use the Remote Config check started during splash loading.
+      final updateRequired = await _updateCheckFuture;
+
       if (!mounted) return;
 
       if (updateRequired) {
-        // Stay on splash, show a blocking dialog.
         ForceUpdateDialog.show();
         return;
       }
@@ -101,289 +153,178 @@ class _SplashScreenState extends State<SplashScreen>
         transition: Transition.fadeIn,
         duration: const Duration(milliseconds: 500),
       );
-    });
-  }
+    } catch (e) {
+      debugPrint('Force update check failed: $e');
 
-  Animation<Color?> _cycle(List<Color> c) {
-    return TweenSequence<Color?>([
-      TweenSequenceItem(
-        tween: ColorTween(begin: c[0], end: c[1]),
-        weight: 1,
-      ),
-      TweenSequenceItem(
-        tween: ColorTween(begin: c[1], end: c[2]),
-        weight: 1,
-      ),
-      TweenSequenceItem(
-        tween: ColorTween(begin: c[2], end: c[0]),
-        weight: 1,
-      ),
-    ]).animate(_load);
+      if (!mounted) return;
+
+      // Allow the game to open if the update check fails.
+      Get.off(
+            () => const GameIntroScreen(),
+        transition: Transition.fadeIn,
+        duration: const Duration(milliseconds: 500),
+      );
+    }
   }
 
   @override
   void dispose() {
-    _intro.dispose();
-    _ambient.dispose();
-    _load.dispose();
+    _videoController.removeListener(_videoListener);
+    _videoController.dispose();
+
     super.dispose();
-  }
-
-  // Same staggered reveal as the intro screen
-  Widget _reveal(double start, Widget child) {
-    final animation = CurvedAnimation(
-      parent: _intro,
-      curve: Interval(
-        start,
-        math.min(1.0, start + 0.55),
-        curve: Curves.easeOutCubic,
-      ),
-    );
-
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, _) => Opacity(
-        opacity: animation.value,
-        child: Transform.translate(
-          offset: Offset(0, 18 * (1 - animation.value)),
-          child: child,
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
-      body: AnimatedBuilder(
-        animation: Listenable.merge([_ambient, _load]),
-        builder: (context, _) {
-          final color = _color.value ?? _colors[0];
-          final deep = _colorDeep.value ?? _colorsDeep[0];
-
-          return Stack(
-            children: [
-              Positioned.fill(child: _buildBackground(color, deep)),
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ScaleTransition(
-                      scale: _logoScale,
-                      child: _reveal(0.0, _buildLogo(color, deep)),
-                    ),
-                    const SizedBox(height: 28),
-                    _reveal(
-                      0.18,
-                      Text(
-                        'Arrow Escape',
-                        style: TextStyle(
-                          color: _textPrimary,
-                          fontSize: 32,
-                          letterSpacing: -1.2,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    _reveal(
-                      0.28,
-                      Text(
-                        'Think • Trace • Escape',
-                        style: TextStyle(
-                          color: _textSecondary,
-                          fontSize: 12,
-                          letterSpacing: 0.6,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 44),
-                    _reveal(0.42, _buildLoader(color, deep)),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildBackground(Color color, Color deep) {
-    final drift = math.sin(_ambient.value * math.pi) * 22;
-
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: CustomPaint(
-            painter: MazePainter(
-              color: (_isDark ? Colors.white : Colors.black).withValues(
-                alpha: _isDark ? 0.03 : 0.035,
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: -150 + drift,
-          right: -120,
-          child: Container(
-            width: 360,
-            height: 360,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  color.withValues(alpha: _isDark ? 0.28 : 0.16),
-                  color.withValues(alpha: 0),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -140 - drift,
-          left: -150,
-          child: Container(
-            width: 340,
-            height: 340,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  deep.withValues(alpha: _isDark ? 0.20 : 0.11),
-                  deep.withValues(alpha: 0),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLogo(Color color, Color deep) {
-    return Container(
-      width: 112,
-      height: 112,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [color, deep],
-        ),
-        borderRadius: BorderRadius.circular(34),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: _isDark ? 0.42 : 0.34),
-            blurRadius: 32,
-            spreadRadius: -6,
-            offset: const Offset(0, 16),
-          ),
-          BoxShadow(
-            color: deep.withValues(alpha: 0.35),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(33),
+      backgroundColor: _background,
+      body: SizedBox.expand(
         child: Stack(
-          alignment: Alignment.center,
+          fit: StackFit.expand,
           children: [
-            Positioned.fill(
-              child: CustomPaint(
-                painter: MazePainter(
-                  color: Colors.white.withValues(alpha: 0.10),
-                  cell: 22,
-                  seed: 4,
-                ),
-              ),
-            ),
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 50,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.white.withValues(alpha: 0.18),
-                      Colors.white.withValues(alpha: 0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const Icon(Icons.route_rounded, size: 58, color: Colors.white),
+            // Full-screen animated splash video.
+            // Full video centered without cropping.
+            if (_isVideoReady)
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final videoSize = _videoController.value.size;
+
+                  final videoWidth = videoSize.width;
+                  final videoHeight = videoSize.height;
+
+                  final scale = math.min(
+                    constraints.maxWidth / videoWidth,
+                    constraints.maxHeight / videoHeight,
+                  );
+
+                  final displayWidth = videoWidth * scale;
+                  final displayHeight = videoHeight * scale;
+
+                  return Center(
+                    child: SizedBox(
+                      width: displayWidth,
+                      height: displayHeight,
+                      child: VideoPlayer(_videoController),
+                    ),
+                  );
+                },
+              )
+            else
+              ColoredBox(color: _background),
+
+            // Subtle bottom gradient for branding.
+            // Positioned(
+            //   left: 0,
+            //   right: 0,
+            //   bottom: 0,
+            //   height: 260,
+            //   child: IgnorePointer(
+            //     child: DecoratedBox(
+            //       decoration: BoxDecoration(
+            //         gradient: LinearGradient(
+            //           begin: Alignment.topCenter,
+            //           end: Alignment.bottomCenter,
+            //           colors: [
+            //             Colors.transparent,
+            //             _background.withValues(alpha: 0.65),
+            //             _background,
+            //           ],
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
+
+            // // App branding and loading indicator.
+            // Positioned(
+            //   left: 24,
+            //   right: 24,
+            //   bottom: MediaQuery.of(context).padding.bottom + 55,
+            //   child: Column(
+            //     mainAxisSize: MainAxisSize.min,
+            //     children: [
+            //       Text(
+            //         'Arrow Escape',
+            //         textAlign: TextAlign.center,
+            //         style: TextStyle(
+            //           color: _primaryText,
+            //           fontSize: 30,
+            //           letterSpacing: -1.1,
+            //           fontWeight: FontWeight.w900,
+            //         ),
+            //       ),
+            //
+            //       const SizedBox(height: 7),
+            //
+            //       Text(
+            //         'Think • Trace • Escape',
+            //         textAlign: TextAlign.center,
+            //         style: TextStyle(
+            //           color: _secondaryText,
+            //           fontSize: 12,
+            //           letterSpacing: 1.1,
+            //           fontWeight: FontWeight.w600,
+            //         ),
+            //       ),
+            //
+            //       const SizedBox(height: 34),
+            //
+            //       // Video progress indicator.
+            //       SizedBox(
+            //         width: 125,
+            //         child: ClipRRect(
+            //           borderRadius: BorderRadius.circular(10),
+            //           child: _videoFailed
+            //               ? const LinearProgressIndicator(
+            //                   minHeight: 4,
+            //                   backgroundColor: Color(0x332FFFFFF),
+            //                   valueColor: AlwaysStoppedAnimation(
+            //                     Color(0xFF8175FF),
+            //                   ),
+            //                 )
+            //               : ValueListenableBuilder<VideoPlayerValue>(
+            //                   valueListenable: _videoController,
+            //                   builder: (context, value, child) {
+            //                     final progress =
+            //                         value.duration.inMilliseconds > 0
+            //                             ? (value.position.inMilliseconds /
+            //                                     value.duration.inMilliseconds)
+            //                                 .clamp(0.0, 1.0)
+            //                             : 0.0;
+            //
+            //                     return LinearProgressIndicator(
+            //                       value: progress,
+            //                       minHeight: 4,
+            //                       backgroundColor:
+            //                           Colors.white.withValues(alpha: 0.12),
+            //                       valueColor:
+            //                           const AlwaysStoppedAnimation(
+            //                         Color(0xFF35D6FF),
+            //                       ),
+            //                     );
+            //                   },
+            //                 ),
+            //         ),
+            //       ),
+            //
+            //       const SizedBox(height: 14),
+            //
+            //       Text(
+            //         'PREPARING YOUR ESCAPE...',
+            //         style: TextStyle(
+            //           color: Colors.white.withValues(alpha: 0.55),
+            //           fontSize: 9,
+            //           letterSpacing: 2.0,
+            //           fontWeight: FontWeight.w700,
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
           ],
         ),
       ),
     );
   }
-
-  Widget _buildLoader(Color color, Color deep) {
-    final track = _isDark
-        ? Colors.white.withValues(alpha: 0.08)
-        : Colors.black.withValues(alpha: 0.07);
-
-    return SizedBox(
-      width: 120,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: Stack(
-          children: [
-            Container(height: 6, color: track),
-            FractionallySizedBox(
-              widthFactor: Curves.easeInOut.transform(_load.value),
-              child: Container(
-                height: 6,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [color, deep]),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class MazePainter extends CustomPainter {
-  final Color color;
-  final double cell;
-  final int seed;
-
-  const MazePainter({required this.color, this.cell = 36, this.seed = 11});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1.2
-      ..strokeCap = StrokeCap.round;
-
-    final rnd = math.Random(seed);
-
-    for (double y = 0; y < size.height; y += cell) {
-      for (double x = 0; x < size.width; x += cell) {
-        if (rnd.nextBool()) {
-          canvas.drawLine(Offset(x, y), Offset(x + cell, y), paint);
-        } else {
-          canvas.drawLine(Offset(x, y), Offset(x, y + cell), paint);
-        }
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant MazePainter old) =>
-      old.color != color || old.cell != cell || old.seed != seed;
 }

@@ -6,6 +6,7 @@ import 'package:arrow/controller/theme_controller.dart';
 import 'package:arrow/screen/splash/splash_screen.dart';
 import 'package:arrow/services/ads/ad_config.dart';
 import 'package:arrow/services/analytics_service.dart';
+import 'package:arrow/services/ads/app_open_ad_service.dart';
 import 'package:arrow/services/remote_config_service.dart';
 
 import 'package:flutter/foundation.dart';
@@ -61,7 +62,7 @@ Future<void> main() async {
   if (RemoteConfigService.instance.adsEnabled) {
     await MobileAds.instance.initialize();
   }
-
+  AppOpenAdService.instance.start();
   // Initialize GetStorage
   await GetStorage.init();
 

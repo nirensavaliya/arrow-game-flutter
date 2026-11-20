@@ -56,6 +56,20 @@ class RemoteConfigService {
     'ads_min_version_ios': '',
     'ads_max_version_ios': '',
 
+    // ==================== APP OPEN ADS ====================
+    // Use real booleans for new keys. Your existing '' bool defaults
+    // would throw on `_defaults[key] as bool` before initialize() finishes.
+    'appopenads_enabled': false,
+    'appopenads_id_android': '',
+    'appopenads_id_ios': '',
+    'test_appopenads_id_android': '',
+    'test_appopenads_id_ios': '',
+
+    // Minimum seconds the app must stay in background before showing.
+    'appopenads_min_background_seconds': '',
+    // Minimum seconds between two app open ads.
+    'appopenads_cooldown_seconds': '',
+
     // ==================== FORCE UPDATE ====================
     // All empty on purpose. Set the real values in Firebase Console.
 
@@ -209,6 +223,20 @@ class RemoteConfigService {
       _string('test_rewarded_id_ios');
   String get testBannerIdAndroid => _string('test_banner_id_android');
   String get testBannerIdIos => _string('test_banner_id_ios');
+
+  /// App open switch (also requires adsEnabled).
+  bool get appOpenEnabled => _bool('appopenads_enabled');
+
+  String get appOpenIdAndroid => _string('appopenads_id_android');
+  String get appOpenIdIos => _string('appopenads_id_ios');
+  String get testAppOpenIdAndroid => _string('test_appopenads_id_android');
+  String get testAppOpenIdIos => _string('test_appopenads_id_ios');
+
+  int get appOpenMinBackgroundSeconds =>
+      _int('appopenads_min_background_seconds').clamp(0, 3600).toInt();
+
+  int get appOpenCooldownSeconds =>
+      _int('appopenads_cooldown_seconds').clamp(0, 3600).toInt();
 
   // ==================== Force Update ====================
 

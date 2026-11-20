@@ -87,13 +87,11 @@ bool _seg(
 }
 
 bool _heart(double x, double y) {
-  final hx = x * 1.25;
-  final hy = -y * 1.25 + 0.20;
-
+  final hx = x * 1.1;
+  final hy = -y * 1.1 + 0.12;
   final x2 = hx * hx;
   final y2 = hy * hy;
   final q = x2 + y2 - 1.0;
-
   return q * q * q - x2 * y2 * hy <= 0;
 }
 
