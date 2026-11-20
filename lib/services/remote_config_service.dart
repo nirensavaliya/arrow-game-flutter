@@ -49,6 +49,18 @@ class RemoteConfigService {
     'test_banner_id_android': '',
     'test_banner_id_ios': '',
 
+    // ==================== Rewarded placements ====================
+    // Timer ID is shared by Timed Challenge + Speed Run.
+    'rewarded_timer_id_android': '',
+    'rewarded_timer_id_ios': '',
+    'rewarded_bonus_id_android': '',
+    'rewarded_bonus_id_ios': '',
+
+    'test_rewarded_timer_id_android': '',
+    'test_rewarded_timer_id_ios': '',
+    'test_rewarded_bonus_id_android': '',
+    'test_rewarded_bonus_id_ios': '',
+
     // Ads are shown only if app version is within [min, max] (inclusive).
     // Empty = no limit. Format: 1.2.3
     'ads_min_version_android': '',
@@ -207,7 +219,19 @@ class RemoteConfigService {
   String get bannerIdAndroid => _string('banner_id_android');
   String get bannerIdIos => _string('banner_id_ios');
 
+  // Rewarded - Timed Challenge + Speed Run
+  String get rewardedTimerIdAndroid => _string('rewarded_timer_id_android');
+  String get rewardedTimerIdIos => _string('rewarded_timer_id_ios');
+  String get testRewardedTimerIdAndroid =>
+      _string('test_rewarded_timer_id_android');
+  String get testRewardedTimerIdIos => _string('test_rewarded_timer_id_ios');
 
+  // Rewarded - coin bonus (x1.2 / x1.5) after a win
+  String get rewardedBonusIdAndroid => _string('rewarded_bonus_id_android');
+  String get rewardedBonusIdIos => _string('rewarded_bonus_id_ios');
+  String get testRewardedBonusIdAndroid =>
+      _string('test_rewarded_bonus_id_android');
+  String get testRewardedBonusIdIos => _string('test_rewarded_bonus_id_ios');
 
   // Test ad unit IDs from Remote Config.
   String get testInterstitialIdAndroid =>

@@ -4,13 +4,17 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'ad_config.dart';
 
 class RewardedAdService {
+  RewardedAdService({this.placement = RewardedPlacement.standard});
+
+  final RewardedPlacement placement;
+
   RewardedAd? _rewardedAd;
   bool _isLoading = false;
   bool _isShowing = false;
 
   bool get isReady => _rewardedAd != null;
 
-  String get _adUnitId => AdConfig.rewardedId;
+  String get _adUnitId => AdConfig.rewardedIdFor(placement);
 
   // Tracks which unit ID the loaded ad belongs to, so a Remote Config
   // flip between test/real IDs triggers a reload.

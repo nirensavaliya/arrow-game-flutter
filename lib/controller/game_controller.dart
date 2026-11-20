@@ -54,6 +54,11 @@ class GameController extends GetxController {
   bool get canShowRewarded => AdConfig.rewardedEnabled;
   bool get canShowBanner => AdConfig.bannerEnabled;
 
+  /// Rewarded placement for hint / restart / continue ads in the current mode.
+  /// Timed Challenge and Speed Run share one ID; Normal uses the standard ID.
+  RewardedPlacement get rewardedPlacement =>
+      timedMode ? RewardedPlacement.timer : RewardedPlacement.standard;
+
   /// Number of completed levels between interstitial opportunities.
   /// A value of 0 disables interstitial scheduling.
   int get interstitialEveryLevels => _rc.interstitialEveryLevels;

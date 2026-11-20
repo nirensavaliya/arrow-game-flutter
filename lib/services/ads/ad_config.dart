@@ -4,6 +4,16 @@ import 'package:flutter/foundation.dart';
 
 import '../remote_config_service.dart';
 
+/// Which rewarded ad unit a placement uses.
+enum RewardedPlacement {
+  /// Normal mode: hints, restarts, continue.
+  standard,
+  /// Timed Challenge + Speed Run (shared ID).
+  timer,
+  /// Coin multiplier shown after a win (all modes).
+  bonus,
+}
+
 class AdConfig {
   AdConfig._();
 
@@ -48,7 +58,6 @@ class AdConfig {
   /// Only a real release build uses the REAL ids from Remote Config.
   static bool get _useTestIds => !kReleaseMode;
 
-
   static String get interstitialId {
     if (_useTestIds) {
       return Platform.isAndroid
@@ -70,6 +79,7 @@ class AdConfig {
 
     return Platform.isAndroid ? _rc.rewardedIdAndroid : _rc.rewardedIdIos;
   }
+
   static String get bannerId {
     if (_useTestIds) {
       return Platform.isAndroid ? _rc.testBannerIdAndroid : _rc.testBannerIdIos;
@@ -84,5 +94,38 @@ class AdConfig {
           : _rc.testAppOpenIdIos;
     }
     return Platform.isAndroid ? _rc.appOpenIdAndroid : _rc.appOpenIdIos;
+  }
+
+  static String rewardedIdFor(RewardedPlacement placement) {
+    final isAndroid = Platform.isAndroid;
+    String id;
+
+    switch (placement) {
+      case RewardedPlacement.timer:
+        id = _useTestIds
+            ? (isAndroid
+            ? _rc.testRewardedTimerIdAndroid
+            : _rc.testRewardedTimerIdIos)
+            : (isAndroid
+            ? _rc.rewardedTimerIdAndroid
+            : _rc.rewardedTimerIdIos);
+        break;
+      case RewardedPlacement.bonus:
+        id = _useTestIds
+            ? (isAndroid
+            ? _rc.testRewardedBonusIdAndroid
+            : _rc.testRewardedBonusIdIos)
+            : (isAndroid
+            ? _rc.rewardedBonusIdAndroid
+            : _rc.rewardedBonusIdIos);
+        break;
+      case RewardedPlacement.standard:
+        id = rewardedId;
+        break;
+    }
+
+    // If a new ID is not set in Remote Config yet, fall back to the
+    // original rewarded ID so nothing breaks.
+    return id.isNotEmpty ? id : rewardedId;
   }
 }
