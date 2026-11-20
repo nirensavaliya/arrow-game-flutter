@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:arrow/services/remote_config_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 
@@ -86,7 +87,12 @@ class AppOpenAdService {
       return;
     }
 
-    _show();
+    // Let Flutter finish resuming and laying out before the ad appears.
+    Future.delayed(const Duration(milliseconds: 350), () {
+      if (!AdConfig.appOpenEnabled || _isShowing || suppress) return;
+      _show();
+    });
+
   }
 
   void _load() {
@@ -119,6 +125,12 @@ class AppOpenAdService {
     final ad = _ad;
     if (ad == null) return;
 
+    // Make the system bars predictable while the ad is on screen.
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: SystemUiOverlay.values,
+    );
+
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdShowedFullScreenContent: (_) {
         _isShowing = true;
@@ -126,12 +138,14 @@ class AppOpenAdService {
       },
       onAdDismissedFullScreenContent: (ad) {
         _isShowing = false;
+        _restoreSystemUi();
         ad.dispose();
         _ad = null;
-        _load(); // preload the next one
+        _load();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
         _isShowing = false;
+        _restoreSystemUi();
         debugPrint('AppOpenAd failed to show: $error');
         ad.dispose();
         _ad = null;
@@ -140,6 +154,12 @@ class AppOpenAdService {
     );
 
     ad.show();
+  }
+
+  void _restoreSystemUi() {
+    // Use whatever mode your app normally uses.
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    // or: SystemUiMode.immersiveSticky
   }
 
   void _disposeAd() {

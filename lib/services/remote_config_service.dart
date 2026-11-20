@@ -59,7 +59,7 @@ class RemoteConfigService {
     // ==================== APP OPEN ADS ====================
     // Use real booleans for new keys. Your existing '' bool defaults
     // would throw on `_defaults[key] as bool` before initialize() finishes.
-    'appopenads_enabled': false,
+    'appopenads_enabled': '',
     'appopenads_id_android': '',
     'appopenads_id_ios': '',
     'test_appopenads_id_android': '',
