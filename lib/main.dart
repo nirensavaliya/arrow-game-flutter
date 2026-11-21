@@ -22,6 +22,27 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 import 'firebase_options.dart';
 
+/// Remembers the last real system bar insets.
+///
+/// While a full-screen ad (AdActivity) is open, Android reports
+/// padding.top = 0 (status bar hidden). When the ad closes it goes back
+/// to the real value. That change makes every SafeArea / MediaQuery.padding
+/// based layout jump up and down. We ignore the temporary 0 and keep the
+/// last real value so the layout stays stable.
+class StableInsets {
+  static double top = 0;
+  static double bottom = 0;
+  static double left = 0;
+  static double right = 0;
+
+  static void update(EdgeInsets padding) {
+    if (padding.top > 0) top = padding.top;
+    if (padding.bottom > 0) bottom = padding.bottom;
+    if (padding.left > 0) left = padding.left;
+    if (padding.right > 0) right = padding.right;
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -124,6 +145,28 @@ class MyApp extends StatelessWidget {
           ),
           useMaterial3: true,
         ),
+
+        // Keeps system insets constant so screens don't jump
+        // when a full-screen ad opens/closes.
+        builder: (context, child) {
+          final mq = MediaQuery.of(context);
+          StableInsets.update(mq.padding);
+
+          final stablePadding = EdgeInsets.fromLTRB(
+            StableInsets.left,
+            StableInsets.top,
+            StableInsets.right,
+            StableInsets.bottom,
+          );
+
+          return MediaQuery(
+            data: mq.copyWith(
+              padding: stablePadding,
+              viewPadding: stablePadding,
+            ),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
 
         home: const SplashScreen(),
       );

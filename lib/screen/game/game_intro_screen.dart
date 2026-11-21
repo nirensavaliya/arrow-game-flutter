@@ -457,6 +457,19 @@ class _GameIntroScreenState extends State<GameIntroScreen>
             size: 24,
           ),
         ),
+        // SizedBox(
+        //   width: 46,
+        //   height: 46,
+        //   child: ClipRRect(
+        //     borderRadius: BorderRadius.circular(16),
+        //     child: Image.asset(
+        //       'assets/images/app_logo.png',
+        //       width: 46,
+        //       height: 46,
+        //       fit: BoxFit.cover,
+        //     ),
+        //   ),
+        // ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
