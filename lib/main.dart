@@ -24,11 +24,7 @@ import 'firebase_options.dart';
 
 /// Remembers the last real system bar insets.
 ///
-/// While a full-screen ad (AdActivity) is open, Android reports
-/// padding.top = 0 (status bar hidden). When the ad closes it goes back
-/// to the real value. That change makes every SafeArea / MediaQuery.padding
-/// based layout jump up and down. We ignore the temporary 0 and keep the
-/// last real value so the layout stays stable.
+/// Prevents layout jumps when full-screen ads open and close.
 class StableInsets {
   static double top = 0;
   static double bottom = 0;
@@ -43,13 +39,39 @@ class StableInsets {
   }
 }
 
+/// Application entry point.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
+  // --------------------------------------------------
+  // 1. Enable immersive sticky full-screen mode
+  // --------------------------------------------------
+
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+   SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      systemNavigationBarIconBrightness: Brightness.light,
+      systemNavigationBarContrastEnforced: false,
+      systemStatusBarContrastEnforced: false,
+    ),
+  );
+
+  // --------------------------------------------------
+  // 2. Initialize Firebase
+  // --------------------------------------------------
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Initialize Crashlytics
+  // --------------------------------------------------
+  // 3. Initialize Crashlytics
+  // --------------------------------------------------
+
   await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
     !kDebugMode,
   );
@@ -58,16 +80,23 @@ Future<void> main() async {
 
   PlatformDispatcher.instance.onError = (error, stack) {
     FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+
     return true;
   };
 
-  // Initialize Firebase Analytics
+  // --------------------------------------------------
+  // 4. Initialize Firebase Analytics
+  // --------------------------------------------------
+
   await AnalyticsService.instance.setAnalyticsEnabled(!kDebugMode);
 
-  // Initialize Firebase Remote Config
-  // Must run before GameController is created.
+  // --------------------------------------------------
+  // 5. Initialize Remote Config
+  // --------------------------------------------------
+
   try {
     await RemoteConfigService.instance.initialize();
+
     AdConfig.printAdConfiguration();
   } catch (e, stack) {
     debugPrint('Remote Config initialization error: $e');
@@ -79,15 +108,30 @@ Future<void> main() async {
     );
   }
 
-  // Initialize Google Mobile Ads
+  // --------------------------------------------------
+  // 6. Initialize Google Mobile Ads
+  // --------------------------------------------------
+
   if (RemoteConfigService.instance.adsEnabled) {
     await MobileAds.instance.initialize();
   }
+
+  // --------------------------------------------------
+  // 7. Start App Open Ads
+  // --------------------------------------------------
+
   AppOpenAdService.instance.start();
-  // Initialize GetStorage
+
+  // --------------------------------------------------
+  // 8. Initialize GetStorage
+  // --------------------------------------------------
+
   await GetStorage.init();
 
-  // Initialize GetX controllers
+  // --------------------------------------------------
+  // 9. Initialize GetX controllers
+  // --------------------------------------------------
+
   Get.put(GameController(), permanent: true);
 
   final themeController = Get.put(ThemeController(), permanent: true);
@@ -95,19 +139,69 @@ Future<void> main() async {
   // Load saved theme
   themeController.loadTheme();
 
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      statusBarBrightness: Brightness.light,
-    ),
-  );
+  // --------------------------------------------------
+  // 10. Start application
+  // --------------------------------------------------
 
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+// ======================================================
+// MAIN APPLICATION
+// ======================================================
+
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
+
+    _enableImmersiveMode();
+  }
+
+  /// Enables immersive mode.
+  ///
+  /// Reapplies immersive mode when returning from:
+  /// - Full-screen advertisements
+  /// - External applications
+  /// - System UI interruptions
+  Future<void> _enableImmersiveMode() async {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarIconBrightness: Brightness.light,
+        systemNavigationBarContrastEnforced: false,
+        systemStatusBarContrastEnforced: false,
+      ),
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _enableImmersiveMode();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,13 +209,19 @@ class MyApp extends StatelessWidget {
       final themeController = Get.find<ThemeController>();
 
       return GetMaterialApp(
-        title: "Arrow Escape",
+        title: 'Arrow Escape',
         debugShowCheckedModeBanner: false,
 
+        // ------------------------------------------------
+        // THEME MODE
+        // ------------------------------------------------
         themeMode: themeController.isDarkMode.value
             ? ThemeMode.dark
             : ThemeMode.light,
 
+        // ------------------------------------------------
+        // LIGHT THEME
+        // ------------------------------------------------
         theme: ThemeData(
           brightness: Brightness.light,
           fontFamily: 'Outfit',
@@ -134,6 +234,9 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
         ),
 
+        // ------------------------------------------------
+        // DARK THEME
+        // ------------------------------------------------
         darkTheme: ThemeData(
           brightness: Brightness.dark,
           fontFamily: 'Outfit',
@@ -146,10 +249,12 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
         ),
 
-        // Keeps system insets constant so screens don't jump
-        // when a full-screen ad opens/closes.
+        // ------------------------------------------------
+        // STABLE SYSTEM INSETS
+        // ------------------------------------------------
         builder: (context, child) {
           final mq = MediaQuery.of(context);
+
           StableInsets.update(mq.padding);
 
           final stablePadding = EdgeInsets.fromLTRB(
@@ -168,6 +273,9 @@ class MyApp extends StatelessWidget {
           );
         },
 
+        // ------------------------------------------------
+        // INITIAL SCREEN
+        // ------------------------------------------------
         home: const SplashScreen(),
       );
     });

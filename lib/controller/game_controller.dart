@@ -357,7 +357,7 @@ class GameController extends GetxController {
 
     VibrationService.success();
 
-    _hintTimer = Timer(const Duration(seconds: 3), () {
+    _hintTimer = Timer(const Duration(seconds: 6), () {
       if (!isClosed) hintArrow.value = null;
     });
 

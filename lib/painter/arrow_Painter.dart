@@ -21,6 +21,9 @@ class ArrowPainter extends CustomPainter {
   /// When null, arrows are drawn fully.
   final Animation<double>? appearance;
 
+  /// Looping 0 -> 1 animation that drives the hint effect.
+  final Animation<double>? hintAnimation;
+
   ArrowPainter({
     required this.arrows,
     this.isDark = false,
@@ -29,7 +32,14 @@ class ArrowPainter extends CustomPainter {
     this.gridCols = 10,
     this.appearanceProgress = 1.0,
     this.appearance,
-  }) : super(repaint: appearance);
+    this.hintAnimation,
+  }) : super(repaint: _repaintOf(appearance, hintAnimation));
+
+  static Listenable? _repaintOf(Animation<double>? a, Animation<double>? b) {
+    final list = <Listenable>[?a, ?b];
+    if (list.isEmpty) return null;
+    return Listenable.merge(list);
+  }
 
   // COLORS
   Color get _arrowColor =>
@@ -99,8 +109,8 @@ class ArrowPainter extends CustomPainter {
 
         shift =
             arrow.bumpTravel *
-            progress *
-            (horizontal ? size.width : size.height);
+                progress *
+                (horizontal ? size.width : size.height);
       }
 
       if (shift > 0) {
@@ -131,7 +141,8 @@ class ArrowPainter extends CustomPainter {
         headProgress = Curves.easeOutBack.transform(headProgress);
       }
 
-      final isHint = identical(arrow, hintArrow);
+      final isHint = identical(arrow, hintArrow) && !arrow.isMoving;
+      final hintT = isHint ? (hintAnimation?.value ?? 0.0) : 0.0;
 
       final isClearing = arrow.isMoving && !arrow.isBlocked;
 
@@ -149,12 +160,13 @@ class ArrowPainter extends CustomPainter {
         points,
         color: baseColor.withValues(alpha: fade),
         strokeWidth: strokeWidth,
-        // same width in every state
         headLength: headLength,
         headHalfWidth: headHalfWidth,
         cornerRadius: cornerRadius,
         headProgress: headProgress,
-        glow: false,
+        hint: isHint,
+        hintT: hintT,
+        cellSize: cellSize,
       );
     }
   }
@@ -190,16 +202,18 @@ class ArrowPainter extends CustomPainter {
 
   // ARROW DRAWING
   void _drawArrow(
-    Canvas canvas,
-    List<Offset> points, {
-    required Color color,
-    required double strokeWidth,
-    required double headLength,
-    required double headHalfWidth,
-    required double cornerRadius,
-    double headProgress = 1.0,
-    bool glow = false,
-  }) {
+      Canvas canvas,
+      List<Offset> points, {
+        required Color color,
+        required double strokeWidth,
+        required double headLength,
+        required double headHalfWidth,
+        required double cornerRadius,
+        double headProgress = 1.0,
+        bool hint = false,
+        double hintT = 0.0,
+        double cellSize = 30,
+      }) {
     if (points.length < 2) return;
 
     final direction = _headDirection(points);
@@ -215,19 +229,6 @@ class ArrowPainter extends CustomPainter {
 
     final path = _buildSmoothPath(body, cornerRadius);
 
-    // Soft glow behind the hinted arrow.
-    if (glow) {
-      final glowPaint = Paint()
-        ..color = color.withValues(alpha: 0.55)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth * 3.5
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, strokeWidth * 1.5);
-
-      canvas.drawPath(path, glowPaint);
-    }
-
     final bodyPaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
@@ -238,10 +239,91 @@ class ArrowPainter extends CustomPainter {
 
     canvas.drawPath(path, bodyPaint);
 
+    var headColor = color;
+
+    if (hint) {
+      // Timeline (0..1): sweep 0.00-0.55, head flash 0.42-0.55,
+      // ripples 0.50-1.00 (staggered), short rest at the end.
+      final metrics = path.computeMetrics().toList();
+      final total = metrics.fold<double>(0, (s, m) => s + m.length);
+
+      Path range(double from, double to) {
+        final p = Path();
+        var offset = 0.0;
+        for (final m in metrics) {
+          final a = (from - offset).clamp(0.0, m.length).toDouble();
+          final b = (to - offset).clamp(0.0, m.length).toDouble();
+          if (b > a) p.addPath(m.extractPath(a, b), Offset.zero);
+          offset += m.length;
+        }
+        return p;
+      }
+
+      // 1. Comet: bright head, tapered fading tail.
+      final sweep = (hintT / 0.55).clamp(0.0, 1.0).toDouble();
+      if (sweep > 0 && sweep < 1 && total > 0) {
+        final trail = math.max(total * 0.38, strokeWidth * 8);
+        final headPos =
+            Curves.easeInOutCubic.transform(sweep) * (total + trail);
+
+        const slices = 12;
+        for (var i = 0; i < slices; i++) {
+          final k0 = i / slices;
+          final k1 = (i + 1) / slices;
+
+          final from = (headPos - trail * (1 - k0))
+              .clamp(0.0, total)
+              .toDouble();
+          final to = (headPos - trail * (1 - k1)).clamp(0.0, total).toDouble();
+          if (to - from < 0.1) continue;
+
+          final strength = k1 * k1; // 0 at the tail end, 1 at the front
+          final paint = Paint()
+            ..color = Color.lerp(
+              color,
+              Colors.white,
+              0.75,
+            )!.withValues(alpha: 0.9 * strength)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = strokeWidth * (0.35 + 0.55 * k1)
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round
+            ..isAntiAlias = true;
+
+          canvas.drawPath(range(from, to), paint);
+        }
+      }
+
+      // 2. Head flash when the comet arrives.
+      final arrive = ((hintT - 0.42) / 0.13).clamp(0.0, 1.0).toDouble();
+      final flash = math.sin(arrive * math.pi);
+      headColor = Color.lerp(color, Colors.white, 0.65 * flash)!;
+
+      // 3. Two thin ripples expanding from the arrowhead.
+      final center = tip - direction * (headLength * 0.45);
+      for (var k = 0; k < 2; k++) {
+        final t = ((hintT - 0.50 - k * 0.14) / 0.40)
+            .clamp(0.0, 1.0)
+            .toDouble();
+        if (t <= 0 || t >= 1) continue;
+
+        final eased = Curves.easeOutCubic.transform(t);
+        final radius = headLength * 0.7 + cellSize * 0.9 * eased;
+
+        final ring = Paint()
+          ..color = color.withValues(alpha: 0.55 * (1 - t))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(0.8, strokeWidth * 0.7 * (1 - t))
+          ..isAntiAlias = true;
+
+        canvas.drawCircle(center, radius, ring);
+      }
+    }
+
     if (!showHead) return;
 
     final headPaint = Paint()
-      ..color = color
+      ..color = headColor
       ..style = PaintingStyle.fill
       ..strokeJoin = StrokeJoin.round
       ..isAntiAlias = true;
@@ -258,11 +340,11 @@ class ArrowPainter extends CustomPainter {
   }
 
   Path _createArrowHead(
-    Offset tip,
-    Offset direction,
-    double headLength,
-    double headHalfWidth,
-  ) {
+      Offset tip,
+      Offset direction,
+      double headLength,
+      double headHalfWidth,
+      ) {
     final perpendicular = Offset(-direction.dy, direction.dx);
     final base = tip - direction * headLength;
 
@@ -435,6 +517,7 @@ class ArrowPainter extends CustomPainter {
         oldDelegate.gridRows != gridRows ||
         oldDelegate.gridCols != gridCols ||
         oldDelegate.appearanceProgress != appearanceProgress ||
-        oldDelegate.appearance != appearance;
+        oldDelegate.appearance != appearance ||
+        oldDelegate.hintAnimation != hintAnimation;
   }
 }

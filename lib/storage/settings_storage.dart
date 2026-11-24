@@ -10,6 +10,8 @@ class SettingsStorage {
   static const String _vibrationKey = 'settings_vibration_enabled';
   static const String _darkModeKey = 'settings_dark_mode_enabled';
   static const String _defaultModeKey = 'settings_default_game_mode';
+  static const String _onboardingCompletedKey =
+      'arrow_game_onboarding_completed';
 
   // Sound Effects
   static bool getSoundEnabled() {
@@ -77,4 +79,14 @@ class SettingsStorage {
       _storage.remove(_defaultModeKey),
     ]);
   }
+
+  // Onboarding completion
+  static bool isOnboardingCompleted() {
+    return _storage.read<bool>(_onboardingCompletedKey) ?? false;
+  }
+
+  static Future<void> setOnboardingCompleted(bool value) async {
+    await _storage.write(_onboardingCompletedKey, value);
+  }
+
 }

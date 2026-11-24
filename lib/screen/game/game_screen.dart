@@ -99,6 +99,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late final Animation<double> _statusAnim;
   late final Animation<double> _boardAnim;
   late final Animation<double> _bottomAnim;
+  late final AnimationController _hintController;
+  Worker? _hintWorker;
 
   late final AnimationController _shakeController;
   late final AnimationController _drawController;
@@ -765,6 +767,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 160),
     )..addListener(_onZoomTick);
 
+    _hintController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1300),
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
@@ -776,6 +783,20 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       // arrows after their exit animation, not inside onBoardTap).
       _prevArrows = c.arrows.length;
       _arrowsWorker = ever(c.arrows, (_) => _syncArrows(c));
+
+      void syncHintAnim() {
+        if (c.hintArrow.value != null) {
+          if (!_hintController.isAnimating) {
+            _hintController.repeat();
+          }
+        } else {
+          _hintController.stop();
+          _hintController.value = 0;
+        }
+      }
+
+      _hintWorker = ever(c.hintArrow, (_) => syncHintAnim());
+      syncHintAnim();
 
       _prevLives = c.lives.value;
       _livesWorker = ever<int>(c.lives, (v) {
@@ -841,7 +862,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _entranceController.dispose();
     _rewardedAdService.dispose();
     _interstitialAdService.dispose();
-
+    _hintWorker?.dispose();
+    _hintController.dispose();
     super.dispose();
   }
 
@@ -1111,7 +1133,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Widget _topBar(GameController c) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
       child: SizedBox(
         height: 56,
         child: Row(
@@ -1650,6 +1672,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           appearanceProgress: 1.0,
                           appearance: _drawController,
                           hintArrow: highlightedArrow,
+                          hintAnimation: _hintController,
                         ),
                         child: const SizedBox.expand(),
                       ),

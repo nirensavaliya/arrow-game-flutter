@@ -1,13 +1,15 @@
-
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../services/ads/interstitial_ad_service.dart';
 import '../../services/force_update_service.dart';
+import '../../storage/settings_storage.dart';
 import '../../widgets/force_update_dialog.dart';
 import '../game/game_intro_screen.dart';
+import '../onboarding/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,11 +19,9 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  static const String _darkVideoPath =
-      'assets/videos/splash_video.mp4';
+  static const String _darkVideoPath = 'assets/videos/splash_video.mp4';
 
-  static const String _lightVideoPath =
-      'assets/videos/splash_video_light.mp4';
+  static const String _lightVideoPath = 'assets/videos/splash_video_light.mp4';
 
   static const Color _darkBackground = Color(0xFF0B1030);
   static const Color _lightBackground = Color(0xFFF4F5FA);
@@ -42,11 +42,11 @@ class _SplashScreenState extends State<SplashScreen> {
   bool _videoFailed = false;
   bool _videoInitializationStarted = false;
 
-  String get _videoPath =>
-      _isLightTheme ? _lightVideoPath : _darkVideoPath;
+  final InterstitialAdService _interstitialAdService = InterstitialAdService();
 
-  Color get _background =>
-      _isLightTheme ? Colors.white : _darkBackground;
+  String get _videoPath => _isLightTheme ? _lightVideoPath : _darkVideoPath;
+
+  Color get _background => _isLightTheme ? Colors.white : _darkBackground;
 
   Color get _primaryText =>
       _isLightTheme ? _lightPrimaryText : _darkPrimaryText;
@@ -59,8 +59,10 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
 
     // Start force update check while the splash video plays.
-    _updateCheckFuture =
-        ForceUpdateService.instance.isUpdateRequired();
+    _updateCheckFuture = ForceUpdateService.instance.isUpdateRequired();
+
+    // Preload interstitial ad while splash video is playing.
+    _interstitialAdService.loadAd();
   }
 
   @override
@@ -72,8 +74,7 @@ class _SplashScreenState extends State<SplashScreen> {
     _videoInitializationStarted = true;
 
     // Detect the current application theme.
-    _isLightTheme =
-        Theme.of(context).brightness == Brightness.light;
+    _isLightTheme = Theme.of(context).brightness == Brightness.light;
 
     _initializeVideo();
   }
@@ -110,24 +111,40 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
+  void _navigateToOnboarding() {
+    if (!mounted) return;
+
+    Get.off(
+      () => const OnboardingScreen(),
+      transition: Transition.fadeIn,
+      duration: const Duration(milliseconds: 500),
+    );
+  }
+
+  void _navigateToDashboard() {
+    if (!mounted) return;
+
+    Get.off(
+      () => const GameIntroScreen(),
+      transition: Transition.fadeIn,
+      duration: const Duration(milliseconds: 500),
+    );
+  }
+
   void _videoListener() {
-    if (!_videoController.value.isInitialized ||
-        _navigationStarted) {
+    if (!_videoController.value.isInitialized || _navigationStarted) {
       return;
     }
 
     final value = _videoController.value;
 
     if (value.hasError) {
-      debugPrint(
-        'Splash video error: ${value.errorDescription}',
-      );
+      debugPrint('Splash video error: ${value.errorDescription}');
       return;
     }
 
     // Navigate only after the video finishes.
-    if (value.position >= value.duration &&
-        !value.isPlaying) {
+    if (value.position >= value.duration && !value.isPlaying) {
       _checkForceUpdate();
     }
   }
@@ -138,7 +155,6 @@ class _SplashScreenState extends State<SplashScreen> {
     _navigationStarted = true;
 
     try {
-      // Use the Remote Config check started during splash loading.
       final updateRequired = await _updateCheckFuture;
 
       if (!mounted) return;
@@ -148,22 +164,35 @@ class _SplashScreenState extends State<SplashScreen> {
         return;
       }
 
-      Get.off(
-            () => const GameIntroScreen(),
-        transition: Transition.fadeIn,
-        duration: const Duration(milliseconds: 500),
-      );
-    } catch (e) {
-      debugPrint('Force update check failed: $e');
+      // Check whether onboarding was completed.
+      final isOnboardingCompleted = SettingsStorage.isOnboardingCompleted();
 
       if (!mounted) return;
 
-      // Allow the game to open if the update check fails.
-      Get.off(
-            () => const GameIntroScreen(),
-        transition: Transition.fadeIn,
-        duration: const Duration(milliseconds: 500),
-      );
+      // First launch: show onboarding.
+      // Onboarding will handle its own interstitial ad.
+      if (!isOnboardingCompleted) {
+        _navigateToOnboarding();
+        return;
+      }
+
+      // Returning user: wait for splash interstitial.
+      debugPrint('Splash: Waiting 5 seconds for interstitial ad.');
+
+      await Future.delayed(const Duration(seconds: 5));
+
+      if (!mounted) return;
+
+      // Show ad if available, otherwise navigate directly.
+      _interstitialAdService.show(onDone: _navigateToDashboard);
+    } catch (e) {
+      debugPrint('Splash transition error: $e');
+
+      if (!mounted) return;
+
+      // If storage or another transition step fails,
+      // show onboarding rather than accidentally bypassing it.
+      _navigateToOnboarding();
     }
   }
 
