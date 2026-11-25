@@ -82,6 +82,14 @@ class RemoteConfigService {
     // Minimum seconds between two app open ads.
     'appopenads_cooldown_seconds': '',
 
+    // ==================== NATIVE ADS ====================
+    'native_enabled': '',
+    'native_id_android': '',
+    'native_id_ios': '',
+    'test_native_id_android': '',
+    'test_native_id_ios': '',
+    // Show one native ad after every N segment cards. 0 = never.
+    'native_every_segments': '',
     // ==================== FORCE UPDATE ====================
     // All empty on purpose. Set the real values in Firebase Console.
 
@@ -261,6 +269,19 @@ class RemoteConfigService {
 
   int get appOpenCooldownSeconds =>
       _int('appopenads_cooldown_seconds').clamp(0, 3600).toInt();
+
+  // ==================== Native ads ====================
+
+  /// Native switch (also requires adsEnabled).
+  bool get nativeEnabled => _bool('native_enabled');
+
+  String get nativeIdAndroid => _string('native_id_android');
+  String get nativeIdIos => _string('native_id_ios');
+  String get testNativeIdAndroid => _string('test_native_id_android');
+  String get testNativeIdIos => _string('test_native_id_ios');
+
+  int get nativeEverySegments =>
+      _int('native_every_segments').clamp(0, 12).toInt();
 
   // ==================== Force Update ====================
 

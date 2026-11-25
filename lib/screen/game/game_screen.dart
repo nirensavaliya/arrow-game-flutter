@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 import '../../controller/game_controller.dart';
 import '../../modes/game_mode.dart';
@@ -101,6 +102,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late final Animation<double> _bottomAnim;
   late final AnimationController _hintController;
   Worker? _hintWorker;
+  // Showcase keys
+  final GlobalKey _kRestart = GlobalKey();
+  final GlobalKey _kStatus = GlobalKey();
+  final GlobalKey _kHint = GlobalKey();
+  final GlobalKey _kGrid = GlobalKey();
+  final GlobalKey _kZoom = GlobalKey();
+
+  bool _pausedByShowcase = false;
+
 
   late final AnimationController _shakeController;
   late final AnimationController _drawController;
@@ -225,6 +235,81 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       _entranceController.forward(from: 0);
       _drawController.forward(from: 0);
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // SHOWCASE (first launch only)
+  // ---------------------------------------------------------------------------
+
+  void _finishShowcase() {
+    SettingsStorage.setGameShowcaseCompleted(true);
+
+    if (_pausedByShowcase) {
+      _pausedByShowcase = false;
+      if (mounted) {
+        final c = Get.find<GameController>();
+        if (!c.isGameOver.value && !c.isWon.value) c.resumeGame();
+      }
+    }
+  }
+
+  void _maybeStartShowcase(GameController c) {
+    if (SettingsStorage.isGameShowcaseCompleted()) return;
+
+    // Wait for the entrance animation to finish so targets are in place.
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (!mounted) return;
+
+      if (c.timedMode && !c.isPaused.value && !c.isGameOver.value) {
+        c.pauseGame();
+        _pausedByShowcase = true;
+      }
+
+      ShowcaseView.get().startShowCase([
+        _kStatus,
+        _kHint,
+        _kGrid,
+        _kZoom,
+        _kRestart,
+      ]);
+    });
+  }
+
+  Widget _sc({
+    required GlobalKey k,
+    required String title,
+    required String desc,
+    required Widget child,
+    bool circle = false,
+    double radius = 20,
+    TooltipPosition? position,
+  }) {
+    return Showcase(
+      key: k,
+      title: title,
+      description: desc,
+      tooltipPosition: position,
+      targetShapeBorder: circle
+          ? const CircleBorder()
+          : RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
+      tooltipBackgroundColor: _surface,
+      textColor: _textPrimary,
+      titleTextStyle: TextStyle(
+        color: _textPrimary,
+        fontSize: 16,
+        fontWeight: FontWeight.w900,
+      ),
+      descTextStyle: TextStyle(
+        color: _textSecondary,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
+      tooltipActions: const [
+        TooltipActionButton(type: TooltipDefaultActionType.skip),
+        TooltipActionButton(type: TooltipDefaultActionType.next),
+      ],
+      child: child,
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -771,6 +856,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 1300),
     );
+    ShowcaseView.register(
+      onFinish: _finishShowcase,
+      onDismiss: (_) => _finishShowcase(),
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -844,7 +933,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         _prevWrongClicks = value;
       });
 
-      if (mounted) _playEntrance();
+      if (mounted) {
+        _playEntrance();
+        _maybeStartShowcase(c);   // <-- add this
+      }
     });
   }
 
@@ -864,6 +956,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _interstitialAdService.dispose();
     _hintWorker?.dispose();
     _hintController.dispose();
+    ShowcaseView.get().unregister();
     super.dispose();
   }
 
@@ -882,45 +975,54 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           // Premium ambient background (maze texture + drifting mode glow)
           Positioned.fill(child: RepaintBoundary(child: _buildBackground())),
 
-          SafeArea(
-            child: Column(
-              children: [
-                _enter(_topAnim, _topBar(c), dy: -14),
+          Column(
+            children: [
+              _enter(_topAnim, _topBar(c), dy: -14),
 
-                Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 560),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 5),
-                          _enter(_statusAnim, _statusCard(c), dy: -10),
-                          const SizedBox(height: 5),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              child: _enter(
-                                _boardAnim,
-                                _boardCard(c),
-                                dy: 20,
-                                scale: 0.94,
-                              ),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 5),
+                        _enter(
+                          _statusAnim,
+                          _sc(
+                            k: _kStatus,
+                            radius: 24,
+                            title: 'Your progress',
+                            desc: 'See how many arrows are left, plus your hearts or timer.',
+                            child: _statusCard(c),
+                          ),
+                          dy: -10,
+                        ),
+                        const SizedBox(height: 5),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                            ),
+                            child: _enter(
+                              _boardAnim,
+                              _boardCard(c),
+                              dy: 20,
+                              scale: 0.94,
                             ),
                           ),
-                          const SizedBox(height: 5),
-                          _enter(_bottomAnim, _dock(c), dy: 20),
-                          const SizedBox(height: 5),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 5),
+                        _enter(_bottomAnim, _dock(c), dy: 20),
+                        const SizedBox(height: 5),
+
+                      ],
                     ),
                   ),
                 ),
+              ),
 
 
-              ],
-            ),
+            ],
           ),
 
           // Centered action pop (combo / milestone / wrong / hint)
@@ -1152,15 +1254,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             Obx(() {
               final left = c.restartsRemaining.value;
               final showBadge = c.canShowRewarded;
-              return _GlassIconButton(
-                icon: Icons.refresh_rounded,
-                color: _modeColor,
-                glass: _glass,
-                border: _glassBorder,
-                turns: _restartTurns,
-                badge: showBadge ? (left > 0 ? '$left' : 'AD') : null,
-                badgeColor: left > 0 ? _modeColor : _red,
-                onTap: () => _onRestartTap(c),
+              return _sc(
+                k: _kRestart,
+                circle: true,
+                title: 'Restart',
+                desc: 'Start the level over. Watch an ad to get more restarts.',
+                child: _GlassIconButton(
+                  icon: Icons.refresh_rounded,
+                  color: _modeColor,
+                  glass: _glass,
+                  border: _glassBorder,
+                  turns: _restartTurns,
+                  badge: showBadge ? (left > 0 ? '$left' : 'AD') : null,
+                  badgeColor: left > 0 ? _modeColor : _red,
+                  onTap: () => _onRestartTap(c),
+                ),
               );
             }),
 
@@ -1564,7 +1672,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             // Transparent board: no fill, no border, no shadow.
             child: ClipRRect(
               borderRadius: BorderRadius.circular(radius),
-              child: _board(c),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(radius),
+                child: _board(c),
+              ),
             ),
           ),
         );
@@ -1717,19 +1828,31 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _DockButton(
-              icon: Icons.lightbulb_rounded,
-              color: const Color(0xFFFFB300),
-              badge: c.hintsFree ? null : (remaining > 0 ? '$remaining' : 'AD'),
-              badgeColor: remaining > 0 ? _modeColor : _red,
-              onTap: () => _onHint(c),
+            _sc(
+              k: _kHint,
+              position: TooltipPosition.top,
+              title: 'Hint',
+              desc: 'Stuck? Highlights an arrow you can safely tap.',
+              child: _DockButton(
+                icon: Icons.lightbulb_rounded,
+                color: const Color(0xFFFFB300),
+                badge: c.hintsFree ? null : (remaining > 0 ? '$remaining' : 'AD'),
+                badgeColor: remaining > 0 ? _modeColor : _red,
+                onTap: () => _onHint(c),
+              ),
             ),
             const SizedBox(width: 8),
-            _DockButton(
-              icon: Icons.grid_4x4_rounded,
-              color: _showGrid ? _modeColor : _textSecondary,
-              active: _showGrid,
-              onTap: _toggleGrid,
+            _sc(
+              k: _kGrid,
+              position: TooltipPosition.top,
+              title: 'Grid',
+              desc: 'Show or hide the grid lines.',
+              child: _DockButton(
+                icon: Icons.grid_4x4_rounded,
+                color: _showGrid ? _modeColor : _textSecondary,
+                active: _showGrid,
+                onTap: _toggleGrid,
+              ),
             ),
             Container(
               width: 1,
@@ -1737,16 +1860,27 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               margin: const EdgeInsets.symmetric(horizontal: 10),
               color: _hairline,
             ),
-            _DockButton(
-              icon: Icons.zoom_in_rounded,
-              color: _modeColor,
-              onTap: _zoomIn,
-            ),
-            const SizedBox(width: 8),
-            _DockButton(
-              icon: Icons.zoom_out_rounded,
-              color: _modeColor,
-              onTap: _zoomOut,
+            _sc(
+              k: _kZoom,
+              position: TooltipPosition.top,
+              title: 'Zoom',
+              desc: 'Zoom in or out on big boards.',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _DockButton(
+                    icon: Icons.zoom_in_rounded,
+                    color: _modeColor,
+                    onTap: _zoomIn,
+                  ),
+                  const SizedBox(width: 8),
+                  _DockButton(
+                    icon: Icons.zoom_out_rounded,
+                    color: _modeColor,
+                    onTap: _zoomOut,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

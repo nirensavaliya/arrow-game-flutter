@@ -317,44 +317,42 @@ class _GameIntroScreenState extends State<GameIntroScreen>
       body: Stack(
         children: [
           Positioned.fill(child: _buildBackground(mode)),
-          SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
-                  child: _reveal(0.0, _buildTopBar(mode)),
-                ),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final carouselHeight =
-                      (constraints.maxHeight * 0.78).clamp(340.0, 468.0);
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+                child: _reveal(0.0, _buildTopBar(mode)),
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final carouselHeight =
+                    (constraints.maxHeight * 0.78).clamp(340.0, 468.0);
 
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.only(top: 12, bottom: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding:
-                              const EdgeInsets.symmetric(horizontal: 20),
-                              child: _reveal(0.06, _buildHeading()),
-                            ),
-                            const SizedBox(height: 18),
-                            _reveal(
-                              0.16,
-                              _buildCarousel(height: carouselHeight),
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.only(top: 12, bottom: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding:
+                            const EdgeInsets.symmetric(horizontal: 20),
+                            child: _reveal(0.06, _buildHeading()),
+                          ),
+                          const SizedBox(height: 18),
+                          _reveal(
+                            0.16,
+                            _buildCarousel(height: carouselHeight),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-                _reveal(0.42, _buildBottomBar(mode)),
-              ],
-            ),
+              ),
+              _reveal(0.42, _buildBottomBar(mode)),
+            ],
           ),
         ],
       ),
@@ -1180,76 +1178,73 @@ class _GameIntroScreenState extends State<GameIntroScreen>
           top: BorderSide(color: _hairline),
         ),
       ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          width: double.infinity,
-          height: 58,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 450),
-            curve: Curves.easeInOutCubic,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [mode.color, mode.colorDeep],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: mode.color.withValues(
-                    alpha: _isDark ? 0.35 : 0.25,
-                  ),
-                  blurRadius: 22,
-                  offset: const Offset(0, 7),
-                ),
-              ],
+      child: SizedBox(
+        width: double.infinity,
+        height: 58,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeInOutCubic,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [mode.color, mode.colorDeep],
             ),
-            child: ElevatedButton(
-              onPressed: _startGame,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: mode.color.withValues(
+                  alpha: _isDark ? 0.35 : 0.25,
                 ),
+                blurRadius: 22,
+                offset: const Offset(0, 7),
               ),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 350),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.12),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
+            ],
+          ),
+          child: ElevatedButton(
+            onPressed: _startGame,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 350),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.12),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              child: Row(
+                key: ValueKey('$_selectedMode-$buttonLabel'),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(buttonIcon, size: 22),
+                  const SizedBox(width: 7),
+                  Text(
+                    buttonLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16.5,
+                      letterSpacing: -0.2,
+                      fontWeight: FontWeight.w900,
                     ),
-                  );
-                },
-                child: Row(
-                  key: ValueKey('$_selectedMode-$buttonLabel'),
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(buttonIcon, size: 22),
-                    const SizedBox(width: 7),
-                    Text(
-                      buttonLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16.5,
-                        letterSpacing: -0.2,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

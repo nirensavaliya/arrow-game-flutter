@@ -12,6 +12,8 @@ class SettingsStorage {
   static const String _defaultModeKey = 'settings_default_game_mode';
   static const String _onboardingCompletedKey =
       'arrow_game_onboarding_completed';
+  static const String _gameShowcaseKey = 'arrow_game_showcase_completed';
+
 
   // Sound Effects
   static bool getSoundEnabled() {
@@ -36,7 +38,7 @@ class SettingsStorage {
     if (!getSystemTapSoundEnabled()) return;
 
     try {
-      await SystemSound.play(SystemSoundType.click);
+      await SystemSound.play(SystemSoundType.tick);
     } catch (e) {
       debugPrint('System Tap Sound Error: $e');
     }
@@ -89,4 +91,12 @@ class SettingsStorage {
     await _storage.write(_onboardingCompletedKey, value);
   }
 
+  // Game screen showcase (first time only)
+  static bool isGameShowcaseCompleted() {
+    return _storage.read<bool>(_gameShowcaseKey) ?? false;
+  }
+
+  static Future<void> setGameShowcaseCompleted(bool value) async {
+    await _storage.write(_gameShowcaseKey, value);
+  }
 }

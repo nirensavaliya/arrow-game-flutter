@@ -8,8 +8,10 @@ import '../remote_config_service.dart';
 enum RewardedPlacement {
   /// Normal mode: hints, restarts, continue.
   standard,
+
   /// Timed Challenge + Speed Run (shared ID).
   timer,
+
   /// Coin multiplier shown after a win (all modes).
   bonus,
 }
@@ -104,20 +106,16 @@ class AdConfig {
       case RewardedPlacement.timer:
         id = _useTestIds
             ? (isAndroid
-            ? _rc.testRewardedTimerIdAndroid
-            : _rc.testRewardedTimerIdIos)
-            : (isAndroid
-            ? _rc.rewardedTimerIdAndroid
-            : _rc.rewardedTimerIdIos);
+                  ? _rc.testRewardedTimerIdAndroid
+                  : _rc.testRewardedTimerIdIos)
+            : (isAndroid ? _rc.rewardedTimerIdAndroid : _rc.rewardedTimerIdIos);
         break;
       case RewardedPlacement.bonus:
         id = _useTestIds
             ? (isAndroid
-            ? _rc.testRewardedBonusIdAndroid
-            : _rc.testRewardedBonusIdIos)
-            : (isAndroid
-            ? _rc.rewardedBonusIdAndroid
-            : _rc.rewardedBonusIdIos);
+                  ? _rc.testRewardedBonusIdAndroid
+                  : _rc.testRewardedBonusIdIos)
+            : (isAndroid ? _rc.rewardedBonusIdAndroid : _rc.rewardedBonusIdIos);
         break;
       case RewardedPlacement.standard:
         id = rewardedId;
@@ -127,5 +125,15 @@ class AdConfig {
     // If a new ID is not set in Remote Config yet, fall back to the
     // original rewarded ID so nothing breaks.
     return id.isNotEmpty ? id : rewardedId;
+  }
+
+  /// Native ads allowed = master switch AND native switch.
+  static bool get nativeEnabled => _rc.adsEnabled && _rc.nativeEnabled;
+
+  static String get nativeId {
+    if (_useTestIds) {
+      return Platform.isAndroid ? _rc.testNativeIdAndroid : _rc.testNativeIdIos;
+    }
+    return Platform.isAndroid ? _rc.nativeIdAndroid : _rc.nativeIdIos;
   }
 }

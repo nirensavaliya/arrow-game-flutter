@@ -6,7 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../controller/game_controller.dart';
+import '../../services/ads/ad_config.dart';
 import '../../services/ads/banner_ad_service.dart';
+import '../../services/ads/native_ad_service.dart';
+import '../../services/remote_config_service.dart';
 import 'level_design.dart';
 import '../game/game_screen.dart';
 import '../../storage/game_storage.dart';
@@ -810,15 +813,37 @@ class _LevelScreenState extends State<LevelScreen>
   // ───────────────────────── Segment list ─────────────────────────
 
   Widget _segmentList(int unlocked) {
+    final every = AdConfig.nativeEnabled
+        ? RemoteConfigService.instance.nativeEverySegments
+        : 0;
+
+    final segCount = _segments.length;
+    final adCount = every > 0 ? (segCount - 1) ~/ every : 0;
+    final block = every + 1;
+
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 30),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
-          final segment = _segments[index];
+          // Native ad slot (between segment cards, never after the last).
+          if (every > 0 && (index + 1) % block == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 18),
+              child: NativeAdService(
+                key: ValueKey('native-$_mode-$index'),
+                accent: _modeColor,
+                isDark: _isDark,
+                surface: _surface,
+                textPrimary: _textPrimary,
+                textSecondary: _textSecondary,
+              ),
+            );
+          }
 
-          final levelCount = _segmentLevelCount(segment.number);
+          final segIndex = every > 0 ? index - ((index + 1) ~/ block) : index;
+          final segment = _segments[segIndex];
 
-          if (levelCount == 0) {
+          if (_segmentLevelCount(segment.number) == 0) {
             return const SizedBox.shrink();
           }
 
@@ -826,7 +851,7 @@ class _LevelScreenState extends State<LevelScreen>
             padding: const EdgeInsets.only(bottom: 18),
             child: _segmentCard(segment: segment, unlocked: unlocked),
           );
-        }, childCount: _segments.length),
+        }, childCount: segCount + adCount),
       ),
     );
   }

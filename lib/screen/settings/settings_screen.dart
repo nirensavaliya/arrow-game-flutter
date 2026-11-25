@@ -12,6 +12,7 @@ import '../../storage/settings_storage.dart';
 import '../../services/vibration_service.dart';
 import '../../widgets/app_switch.dart';
 import '../../widgets/round_button.dart';
+import '../customization/customization_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -111,163 +112,151 @@ class _SettingsScreenState extends State<SettingsScreen> {
         body: Stack(
           children: [
             Positioned.fill(child: _buildBackground()),
-
-            SafeArea(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-                    child: _buildAppBar(),
-                  ),
-
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(18, 26, 18, 35),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // GAMEPLAY
-                          _sectionTitle(
-                            'Gameplay',
-                            Icons.sports_esports_rounded,
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18,   0, 18, 0),
+                  child: _buildAppBar(),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(18, 26, 18, 35),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // GAMEPLAY
+                        _sectionTitle(
+                          'Gameplay',
+                          Icons.sports_esports_rounded,
+                        ),
+                        const SizedBox(height: 13),
+                        _buildSettingsCard([
+                          _buildSwitchTile(
+                            icon: Icons.volume_up_rounded,
+                            iconColor: _accent,
+                            title: 'Sound Effects',
+                            subtitle: 'Sounds during gameplay',
+                            value: _soundEnabled,
+                            onChanged: (value) async {
+                              setState(() => _soundEnabled = value);
+                              await SettingsStorage.setSoundEnabled(value);
+                            },
                           ),
-                          const SizedBox(height: 13),
+                          _buildDivider(),
+                          // SYSTEM TAP SOUND
+                          _buildSwitchTile(
+                            icon: Icons.touch_app_rounded,
+                            iconColor: const Color(0xFFFFB34F),
+                            title: 'System Tap Sound',
+                            subtitle: 'Native click sound when tapping',
+                            value: _systemTapSoundEnabled,
+                            onChanged: (value) async {
+                              setState(() {
+                                _systemTapSoundEnabled = value;
+                              });
+                              await SettingsStorage.setSystemTapSoundEnabled(
+                                value,
+                              );
+                            },
+                          ),
+                          _buildDivider(),
+                          _buildSwitchTile(
+                            icon: Icons.vibration_rounded,
+                            iconColor: const Color(0xFF35D68A),
+                            title: 'Vibration',
+                            subtitle: 'Haptic feedback on moves',
+                            value: _vibrationEnabled,
+                            onChanged: (value) async {
+                              setState(() => _vibrationEnabled = value);
+                              await SettingsStorage.setVibrationEnabled(
+                                value,
+                              );
+                            },
+                          ),
+                          _buildDivider(),
+                          _buildActionTile(
+                            icon: Icons.timer_rounded,
+                            iconColor: const Color(0xFFFFB34F),
+                            title: 'Default Game Mode',
+                            subtitle: _defaultMode,
+                            onTap: _showGameModeDialog,
+                          ),
+                        ]),
+                        const SizedBox(height: 22),
 
-                          _buildSettingsCard([
-                            _buildSwitchTile(
-                              icon: Icons.volume_up_rounded,
-                              iconColor: _accent,
-                              title: 'Sound Effects',
-                              subtitle: 'Sounds during gameplay',
-                              value: _soundEnabled,
-                              onChanged: (value) async {
-                                setState(() => _soundEnabled = value);
-                                await SettingsStorage.setSoundEnabled(value);
-                              },
-                            ),
+// CUSTOMIZATION
+                        _sectionTitle(
+                          'Customization',
+                          Icons.palette_rounded,
+                        ),
+                        const SizedBox(height: 13),
 
-                            _buildDivider(),
-
-                            // SYSTEM TAP SOUND
-                            _buildSwitchTile(
-                              icon: Icons.touch_app_rounded,
-                              iconColor: const Color(0xFFFFB34F),
-                              title: 'System Tap Sound',
-                              subtitle: 'Native click sound when tapping',
-                              value: _systemTapSoundEnabled,
-                              onChanged: (value) async {
-                                setState(() {
-                                  _systemTapSoundEnabled = value;
-                                });
-
-                                await SettingsStorage.setSystemTapSoundEnabled(
-                                  value,
-                                );
-                              },
-                            ),
-
-                            _buildDivider(),
-
-                            _buildSwitchTile(
-                              icon: Icons.vibration_rounded,
-                              iconColor: const Color(0xFF35D68A),
-                              title: 'Vibration',
-                              subtitle: 'Haptic feedback on moves',
-                              value: _vibrationEnabled,
-                              onChanged: (value) async {
-                                setState(() => _vibrationEnabled = value);
-                                await SettingsStorage.setVibrationEnabled(
-                                  value,
-                                );
-                              },
-                            ),
-
-                            _buildDivider(),
-
-                            _buildActionTile(
-                              icon: Icons.timer_rounded,
-                              iconColor: const Color(0xFFFFB34F),
-                              title: 'Default Game Mode',
-                              subtitle: _defaultMode,
-                              onTap: _showGameModeDialog,
-                            ),
-                          ]),
-
-                          const SizedBox(height: 28),
-
-                          // PREFERENCES
-                          _sectionTitle('Preferences', Icons.tune_rounded),
-                          const SizedBox(height: 13),
-
-                          _buildSettingsCard([
-                            _buildSwitchTile(
-                              icon: Icons.dark_mode_rounded,
-                              iconColor: const Color(0xFF6D9FFF),
-                              title: 'Dark Mode',
-                              subtitle: 'Use a darker appearance',
-                              value: _darkModeEnabled,
-                              onChanged: (value) async {
-                                setState(() => _darkModeEnabled = value);
-                                await _themeController.toggleTheme(value);
-                              },
-                            ),
-
-                            _buildDivider(),
-
-                            _buildActionTile(
-                              icon: Icons.restart_alt_rounded,
-                              iconColor: _red,
-                              title: 'Reset Progress',
-                              subtitle: 'Restart your level progress',
-                              onTap: _confirmReset,
-                              danger: true,
-                            ),
-                          ]),
-
-                          const SizedBox(height: 28),
-
-                          // ABOUT
-                          _sectionTitle('About', Icons.info_outline_rounded),
-                          const SizedBox(height: 13),
-
-                          _buildSettingsCard([
-                            _buildActionTile(
-                              icon: Icons.shield_outlined,
-                              iconColor: _accent,
-                              title: 'Privacy Policy',
-                              subtitle: 'How your data is handled',
-                              onTap: () {
-                                _showSnackbar(
-                                  'Privacy Policy',
-                                  'Connect your privacy policy URL here.',
-                                );
-                              },
-                            ),
-
-                            _buildDivider(),
-
-                            _buildActionTile(
-                              icon: Icons.info_outline_rounded,
-                              iconColor: const Color(0xFF6D9FFF),
-                              title: 'App Version',
-                              subtitle: 'Version 1.0.0',
-                              showArrow: false,
-                              onTap: () {},
-                            ),
-                          ]),
-                        ],
-                      ),
+                        _buildCustomizationCard(),
+                        const SizedBox(height: 20),
+                        // PREFERENCES
+                        _sectionTitle('Preferences', Icons.tune_rounded),
+                        const SizedBox(height: 13),
+                        _buildSettingsCard([
+                          _buildSwitchTile(
+                            icon: Icons.dark_mode_rounded,
+                            iconColor: const Color(0xFF6D9FFF),
+                            title: 'Dark Mode',
+                            subtitle: 'Use a darker appearance',
+                            value: _darkModeEnabled,
+                            onChanged: (value) async {
+                              setState(() => _darkModeEnabled = value);
+                              await _themeController.toggleTheme(value);
+                            },
+                          ),
+                          _buildDivider(),
+                          _buildActionTile(
+                            icon: Icons.restart_alt_rounded,
+                            iconColor: _red,
+                            title: 'Reset Progress',
+                            subtitle: 'Restart your level progress',
+                            onTap: _confirmReset,
+                            danger: true,
+                          ),
+                        ]),
+                        const SizedBox(height: 20),
+                        // ABOUT
+                        _sectionTitle('About', Icons.info_outline_rounded),
+                        const SizedBox(height: 13),
+                        _buildSettingsCard([
+                          _buildActionTile(
+                            icon: Icons.shield_outlined,
+                            iconColor: _accent,
+                            title: 'Privacy Policy',
+                            subtitle: 'How your data is handled',
+                            onTap: () {
+                              _showSnackbar(
+                                'Privacy Policy',
+                                'Connect your privacy policy URL here.',
+                              );
+                            },
+                          ),
+                          _buildDivider(),
+                          _buildActionTile(
+                            icon: Icons.info_outline_rounded,
+                            iconColor: const Color(0xFF6D9FFF),
+                            title: 'App Version',
+                            subtitle: 'Version 1.0.0',
+                            showArrow: false,
+                            onTap: () {},
+                          ),
+                        ]),
+                      ],
                     ),
                   ),
-                  // Banner ad at the very bottom
-                  if (c.canShowBanner)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 0),
-                      child: BannerAdService(),
-                    ),
-                ],
-              ),
+                ),
+                // Banner ad at the very bottom
+                if (c.canShowBanner)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 0),
+                    child: BannerAdService(),
+                  ),
+              ],
             ),
           ],
         ),
@@ -440,6 +429,178 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Divider(height: 1, thickness: 1, color: _dividerColor),
     );
   }
+
+
+// --------------------------------------------------
+// CUSTOMIZATION CARD
+// --------------------------------------------------
+
+  Widget _buildCustomizationCard() {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Color.lerp(
+          _surface,
+          _accent,
+          _isDark ? 0.12 : 0.055,
+        ),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: _accent.withValues(alpha: 0.28),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _accent.withValues(alpha: _isDark ? 0.12 : 0.07),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Palette icon
+              Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFE1D9FF),
+                      Color(0xFFB7A5FF),
+                    ],
+                  ),
+                ),
+                child: const Icon(
+                  Icons.palette_rounded,
+                  color: Color(0xFF5540D5),
+                  size: 27,
+                ),
+              ),
+
+              const SizedBox(width: 11),
+
+              // Title
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
+                      children: [
+                        Text(
+                          'Personalize your game',
+                          style: TextStyle(
+                            color: _ink,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF35C982),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'NEW',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Arrow & Board themes to match your style.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: _muted,
+                        fontSize: 10.5,
+                        height: 1.35,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 5),
+
+              // Customize button
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () async {
+                    await SettingsStorage.playSystemTapSound();
+                    VibrationService.tap();
+                      Get.to(
+                            () => const CustomizationScreen(),
+                        transition: Transition.rightToLeft,
+                        duration: const Duration(milliseconds: 350),
+                      );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 11,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _isDark
+                          ? _accent.withValues(alpha: 0.20)
+                          : Colors.white.withValues(alpha: 0.90),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _accent.withValues(alpha: 0.20),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Customize',
+                          style: TextStyle(
+                            color: _isDark
+                                ? const Color(0xFFAFA3FF)
+                                : _accentDeep,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 13,
+                          color: _isDark
+                              ? const Color(0xFFAFA3FF)
+                              : _accentDeep,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
 
   // --------------------------------------------------
   // SWITCH TILE
@@ -887,3 +1048,4 @@ class _SettingsMazePainter extends CustomPainter {
     return old.color != color;
   }
 }
+

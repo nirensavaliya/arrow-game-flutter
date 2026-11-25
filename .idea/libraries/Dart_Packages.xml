@@ -527,6 +527,13 @@
             </list>
           </value>
         </entry>
+        <entry key="showcaseview">
+          <value>
+            <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/showcaseview-5.1.0/lib" />
+            </list>
+          </value>
+        </entry>
         <entry key="sky_engine">
           <value>
             <list>
@@ -833,6 +840,7 @@
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/posix-6.5.4/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/pub_semver-2.2.1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/record_use-0.6.0/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/showcaseview-5.1.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/source_span-1.10.2/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/stack_trace-1.12.1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/stream_channel-2.1.4/lib" />
