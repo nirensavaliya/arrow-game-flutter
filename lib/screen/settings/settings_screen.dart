@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../constants/app_font_size.dart';
 import '../../controller/game_controller.dart';
 import '../../controller/theme_controller.dart';
 import '../../modes/game_mode.dart';
@@ -102,7 +103,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _ambient.dispose();
     super.dispose();
   }
-
+  double _fs(double size) => AppFontSize.s(context, size);
   @override
   Widget build(BuildContext context) {
     final c = Get.find<GameController>();
@@ -115,7 +116,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(18,   0, 18, 0),
+                  padding: const EdgeInsets.fromLTRB(18,15,18,0),
                   child: _buildAppBar(),
                 ),
                 Expanded(
@@ -186,13 +187,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(height: 22),
 
 // CUSTOMIZATION
-                        _sectionTitle(
-                          'Customization',
-                          Icons.palette_rounded,
-                        ),
-                        const SizedBox(height: 13),
-
-                        _buildCustomizationCard(),
+//                         _sectionTitle(
+//                           'Customization',
+//                           Icons.palette_rounded,
+//                         ),
+//                         const SizedBox(height: 13),
+//
+//                         _buildCustomizationCard(),
                         const SizedBox(height: 20),
                         // PREFERENCES
                         _sectionTitle('Preferences', Icons.tune_rounded),
@@ -349,7 +350,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'Settings',
                 style: TextStyle(
                   color: _ink,
-                  fontSize: 23,
+                  fontSize: _fs(23),
                   letterSpacing: -0.7,
                   fontWeight: FontWeight.w900,
                 ),
@@ -358,7 +359,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'Customize your game experience',
                 style: TextStyle(
                   color: _muted,
-                  fontSize: 11,
+                  fontSize: _fs(AppFontSize.xs + 0.5), // 11
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -394,7 +395,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title,
             style: TextStyle(
               color: _ink,
-              fontSize: 16,
+              fontSize: _fs(AppFontSize.xl), // 16
               letterSpacing: -0.3,
               fontWeight: FontWeight.w900,
             ),
@@ -497,7 +498,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           'Personalize your game',
                           style: TextStyle(
                             color: _ink,
-                            fontSize: 13,
+                            fontSize: _fs(AppFontSize.md),
                             fontWeight: FontWeight.w900,
                             letterSpacing: -0.3,
                           ),
@@ -511,11 +512,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             color: const Color(0xFF35C982),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Text(
+                          child: Text(
                             'NEW',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 8,
+                              fontSize: _fs(8),
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -529,7 +530,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: _muted,
-                        fontSize: 10.5,
+                        fontSize: _fs(AppFontSize.xs),
                         height: 1.35,
                         fontWeight: FontWeight.w600,
                       ),
@@ -577,7 +578,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             color: _isDark
                                 ? const Color(0xFFAFA3FF)
                                 : _accentDeep,
-                            fontSize: 10,
+                            fontSize: _fs(10),
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -630,7 +631,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title,
                   style: TextStyle(
                     color: _ink,
-                    fontSize: 14,
+                    fontSize: _fs(AppFontSize.lg) ,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.2,
                   ),
@@ -640,7 +641,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle,
                   style: TextStyle(
                     color: _muted,
-                    fontSize: 11,
+                    fontSize: _fs(AppFontSize.xs + 0.5),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -787,7 +788,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             style: TextStyle(
               color: _ink,
               fontWeight: FontWeight.w900,
-              fontSize: 19,
+              fontSize: _fs(19),
               letterSpacing: -0.4,
             ),
           ),
@@ -861,7 +862,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             mode,
                             style: TextStyle(
                               color: selected ? modeColor : _ink,
-                              fontSize: 13,
+                              fontSize: _fs(AppFontSize.md), // 13
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -925,7 +926,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'This will reset all game modes to Level 1. '
           'Your sound, vibration, and other settings will remain unchanged.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: _muted, height: 1.5, fontSize: 13),
+          style: TextStyle(
+            color: _muted,
+            height: 1.5,
+            fontSize: _fs(AppFontSize.md), // 13
+          ),
         ),
         actionsAlignment: MainAxisAlignment.center,
         actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),

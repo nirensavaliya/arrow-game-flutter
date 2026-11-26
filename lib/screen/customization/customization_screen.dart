@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../constants/app_font_size.dart';
 import '../../controller/theme_controller.dart';
 
 class CustomizationScreen extends StatefulWidget {
@@ -54,6 +55,8 @@ class _CustomizationScreenState extends State<CustomizationScreen>
   bool _isDark(ThemeController controller) => controller.isDarkMode.value;
 
   Color get _coinColor => const Color(0xFFFFB52E);
+
+  double _fs(double size) => AppFontSize.s(context, size);
 
   @override
   Widget build(BuildContext context) {
@@ -151,7 +154,7 @@ class _CustomizationScreenState extends State<CustomizationScreen>
 
   Widget _buildAppBar(BuildContext context, Color ink, Color muted) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 10),
+      padding: const EdgeInsets.fromLTRB(18, 15, 18, 10),
       child: Row(
         children: [
           GestureDetector(
@@ -176,17 +179,16 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                   'Customization',
                   style: TextStyle(
                     color: ink,
-                    fontSize: 21,
+                    fontSize: _fs(AppFontSize.title + 1),
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.7,
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
                   'Make Arrow Escape yours',
                   style: TextStyle(
                     color: muted,
-                    fontSize: 11,
+                    fontSize: _fs(AppFontSize.xs + 0.5),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -261,11 +263,11 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                         size: 21,
                       ),
                       const SizedBox(width: 7),
-                      const Text(
+                      Text(
                         'STYLE COLLECTION',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 10,
+                          fontSize: _fs(AppFontSize.xs - 0.5),
                           letterSpacing: 1.4,
                           fontWeight: FontWeight.w900,
                         ),
@@ -280,11 +282,11 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                           color: Colors.white.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(15),
                         ),
-                        child: const Text(
+                        child: Text(
                           'EXPLORE',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 9,
+                            fontSize: _fs(AppFontSize.tiny - 0.5),
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -292,11 +294,11 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                     ],
                   ),
                   const Spacer(),
-                  const Text(
+                  Text(
                     'A fresh look\nfor every escape.',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: _fs(24),
                       height: 1.15,
                       letterSpacing: -0.7,
                       fontWeight: FontWeight.w900,
@@ -307,7 +309,7 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                     'Arrows, colors and boards.',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.82),
-                      fontSize: 12,
+                      fontSize: _fs(12),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -349,7 +351,7 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                 title,
                 style: TextStyle(
                   color: ink,
-                  fontSize: 16,
+                  fontSize: _fs(AppFontSize.xl),
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.3,
                 ),
@@ -359,7 +361,7 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                 subtitle,
                 style: TextStyle(
                   color: muted,
-                  fontSize: 10.5,
+                  fontSize: _fs(AppFontSize.xs),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -428,11 +430,11 @@ class _CustomizationScreenState extends State<CustomizationScreen>
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: themes.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.91,
+        childAspectRatio: 0.91 / (AppFontSize.s(context, 1)).clamp(1.0, 1.2),
       ),
       itemBuilder: (context, index) {
         return _buildArrowThemeCard(themes[index], surface, ink, muted, dark);
@@ -559,11 +561,11 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                               color: Colors.white.withValues(alpha: 0.18),
                             ),
                           ),
-                          child: const Text(
+                          child: Text(
                             'ACTIVE STYLE',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 8,
+                              fontSize: _fs(8),
                               fontWeight: FontWeight.w900,
                               letterSpacing: 0.8,
                             ),
@@ -589,7 +591,7 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: ink,
-                            fontSize: 13,
+                            fontSize: _fs(AppFontSize.md),
                             fontWeight: FontWeight.w900,
                             letterSpacing: -0.2,
                           ),
@@ -611,14 +613,13 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 3),
                   Text(
                     theme.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: muted,
-                      fontSize: 10,
+                      fontSize: _fs(10),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -759,9 +760,9 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                         ),
                         child: Text(
                           theme.stars ? 'COSMIC BOARD' : 'BOARD STYLE',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 8,
+                            fontSize: _fs(8),
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0.7,
                           ),
@@ -889,7 +890,7 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                     'EQUIPPED',
                     style: TextStyle(
                       color: foreground,
-                      fontSize: 9,
+                      fontSize: _fs(9), // EQUIPPED, EQUIP
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.65,
                     ),
@@ -901,7 +902,7 @@ class _CustomizationScreenState extends State<CustomizationScreen>
                     'EQUIP',
                     style: TextStyle(
                       color: foreground,
-                      fontSize: 9,
+                      fontSize: _fs(9), // EQUIPPED, EQUIP
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.8,
                     ),
@@ -1059,9 +1060,9 @@ class _CustomizationScreenState extends State<CustomizationScreen>
           const SizedBox(width: 4),
           Text(
             '$price',
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 10,
+              fontSize: _fs(AppFontSize.xs - 0.5), // 10
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1148,7 +1149,7 @@ class _CustomizationBackgroundPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (color.alpha == 0 || size.isEmpty) return;
+    if ((color.a * 255.0).round().clamp(0, 255) == 0 || size.isEmpty) return;
 
     final paint = Paint()
       ..color = color

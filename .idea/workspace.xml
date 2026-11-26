@@ -5,19 +5,22 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="297eef14-14cb-4358-9b3b-507a3f7983eb" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/lib/screen/customization/customization_screen.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/services/ads/native_ad_service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/constants/app_font_size.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/controller/game_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/controller/game_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/model/arrow_model.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/model/arrow_model.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/painter/arrow_Painter.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/painter/arrow_painter.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screen/customization/customization_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen/customization/customization_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screen/game/game_intro_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen/game/game_intro_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screen/game/game_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen/game/game_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screen/level/level_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen/level/level_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screen/onboarding/onboarding_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen/onboarding/onboarding_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screen/result/result_dialog.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen/result/result_dialog.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/screen/settings/settings_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screen/settings/settings_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/services/ads/ad_config.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/ads/ad_config.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/services/remote_config_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/remote_config_service.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/storage/settings_storage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/storage/settings_storage.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -66,7 +69,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "Flutter.main.dart.executor": "Run",
+    "Flutter.main.dart.executor": "Debug",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",

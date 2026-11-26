@@ -141,6 +141,80 @@ class GameController extends GetxController {
   // Uses _rc directly because a field initializer cannot read instance getters.
   final restartsRemaining = GameStorage.loadRestarts(_rc.initialRestarts).obs;
 
+  // ==================== MASTER ARROW ====================
+// Values come from Firebase Remote Config.
+  int get _masterEveryLevels => _rc.masterEveryLevels;
+  int get _masterBonusMin => _rc.masterBonusMin;
+  int get _masterBonusMax => _rc.masterBonusMax;
+
+  /// Increases every time a master sweep finishes. The screen listens to it.
+  final masterBonusEvent = 0.obs;
+  int lastMasterBonusCount = 0;
+
+  bool get hasMasterThisLevel =>
+      _masterEveryLevels > 0 &&
+          level.value > 1 &&
+          level.value % _masterEveryLevels == 0;
+
+  /// Marks one arrow that is free at the start as the master arrow.
+  void _assignMasterArrow() {
+    if (!hasMasterThisLevel || arrows.length < 6) return;
+
+    final free = <int>[];
+    for (var i = 0; i < arrows.length; i++) {
+      if (!_isPathBlocked(i)) free.add(i);
+    }
+    if (free.isEmpty) return;
+
+    final rng = math.Random(level.value * 31 + _variant * 7);
+    final i = free[rng.nextInt(free.length)];
+    arrows[i] = arrows[i].copyWith(isMaster: true);
+  }
+
+  /// First arrow that can leave right now (its exit path is clear).
+  int _nextFreeArrow() {
+    for (var i = 0; i < arrows.length; i++) {
+      final a = arrows[i];
+      if (!a.isActive || a.isMoving || a.isBlocked || a.isMaster) continue;
+      if (_isPathBlocked(i)) continue;
+      return i;
+    }
+    return -1;
+  }
+
+  /// After the master arrow is tapped, clears 4-5 more arrows whose path is
+  /// clear. Each pick is checked again, so an arrow that was blocked by a
+  /// cleared arrow can be picked next.
+  Future<void> _masterSweep() async {
+    final gen = _generation;
+    final target =
+        _masterBonusMin + math.Random().nextInt(_masterBonusMax - _masterBonusMin + 1);
+
+    var cleared = 0;
+
+    for (var k = 0; k < target; k++) {
+      await Future.delayed(const Duration(milliseconds: 140));
+      if (!_alive(gen) || isWon.value || isGameOver.value) break;
+
+      final i = _nextFreeArrow();
+      if (i == -1) break; // nothing else has a clear path
+
+      unawaited(_animateArrowOut(i));
+      cleared++;
+    }
+
+    if (cleared > 0 && _alive(gen)) {
+      lastMasterBonusCount = cleared;
+      masterBonusEvent.value++;
+      _track('master_arrow_used', parameters: {
+        'level': level.value,
+        'mode': selectedMode.value.name,
+        'bonus_cleared': cleared,
+      });
+      VibrationService.success();
+    }
+  }
+
   /// Uses one restart. Returns false when none are left.
   bool consumeRestart() {
     // No way to earn more restarts → no limit.
@@ -684,7 +758,7 @@ class GameController extends GetxController {
 
     arrows.assignAll(_generateLevel(level.value));
     totalArrows.value = arrows.length;
-
+    _assignMasterArrow();          // <-- add
     if (isSpeedRun) {
       final duration = modeConfig.sessionDurationSeconds;
 
@@ -1815,8 +1889,12 @@ class GameController extends GetxController {
     if (_isPathBlocked(selectedIndex)) {
       _animateBlocked(selectedIndex);
     } else {
+      final isMaster = arrows[selectedIndex].isMaster;
+
       VibrationService.tap();
       _animateArrowOut(selectedIndex);
+
+      if (isMaster) unawaited(_masterSweep());
     }
   }
 

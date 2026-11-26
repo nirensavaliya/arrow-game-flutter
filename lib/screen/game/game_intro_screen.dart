@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../constants/app_font_size.dart';
 import '../../controller/game_controller.dart';
 import '../../modes/game_mode.dart';
 import '../../modes/game_mode_config.dart';
@@ -307,7 +308,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
       },
     );
   }
-
+  double _f(double size) => AppFontSize.s(context, size);
   @override
   Widget build(BuildContext context) {
     final mode = _modes[_selectedMode];
@@ -320,7 +321,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
           Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+                padding: const EdgeInsets.fromLTRB(10, 15, 10, 0),
                 child: _reveal(0.0, _buildTopBar(mode)),
               ),
               Expanded(
@@ -478,17 +479,16 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                 'Arrow Escape',
                 style: TextStyle(
                   color: _textPrimary,
-                  fontSize: 20,
+                  fontSize: _f(AppFontSize.title),
                   letterSpacing: -0.6,
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(height: 1),
               Text(
                 'Think • Trace • Escape',
                 style: TextStyle(
                   color: _textSecondary,
-                  fontSize: 11,
+                  fontSize: _f(AppFontSize.sm),
                   letterSpacing: 0.3,
                   fontWeight: FontWeight.w600,
                 ),
@@ -545,7 +545,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
             '$_coinCount',
             style: TextStyle(
               color: _textPrimary,
-              fontSize: 14,
+              fontSize: _f(AppFontSize.lg),
               letterSpacing: -0.2,
               fontWeight: FontWeight.w900,
             ),
@@ -594,7 +594,8 @@ class _GameIntroScreenState extends State<GameIntroScreen>
           'How do you want\nto play today?',
           style: TextStyle(
             color: _textPrimary,
-            fontSize: 30,
+            fontSize: _f(AppFontSize.h1),
+
             height: 1.07,
             letterSpacing: -1.3,
             fontWeight: FontWeight.w900,
@@ -605,7 +606,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
           'Swipe to explore modes. Progress is saved separately.',
           style: TextStyle(
             color: _textSecondary,
-            fontSize: 13,
+            fontSize: _f(AppFontSize.md),
             height: 1.45,
           ),
         ),
@@ -834,9 +835,10 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                           ),
                           child: Text(
                             mode.tagline,
-                            style: const TextStyle(
+                            // tagline
+                            style: TextStyle(
                               color: Colors.white,
-                              fontSize: 9.5,
+                              fontSize: _f(AppFontSize.tiny),
                               letterSpacing: 1.2,
                               fontWeight: FontWeight.w900,
                             ),
@@ -849,9 +851,10 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                       mode.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      // mode.title
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 28,
+                        fontSize: _f(AppFontSize.h2),
                         height: 1.05,
                         letterSpacing: -1,
                         fontWeight: FontWeight.w900,
@@ -864,7 +867,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.88),
-                        fontSize: 13,
+                        fontSize: _f(AppFontSize.md),
                         height: 1.42,
                       ),
                     ),
@@ -896,9 +899,10 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                               mode.detail,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              // mode.detail
+                              style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 13,
+                                fontSize: _f(AppFontSize.md),
                                 letterSpacing: -0.1,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -935,7 +939,8 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                                     color: selected
                                         ? mode.colorDeep
                                         : Colors.white,
-                                    fontSize: 10.5,
+                                    // 'Selected' / 'Select'
+                                    fontSize: _f(AppFontSize.xs),
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
@@ -973,9 +978,9 @@ class _GameIntroScreenState extends State<GameIntroScreen>
           const SizedBox(width: 5),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 10.5,
+              fontSize: _f(AppFontSize.xs),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1038,7 +1043,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                       '${(value * 100).round()}%',
                       style: TextStyle(
                         color: _textPrimary,
-                        fontSize: 13,
+                        fontSize: _f(AppFontSize.md),
                         letterSpacing: -0.3,
                         fontWeight: FontWeight.w900,
                       ),
@@ -1060,7 +1065,8 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                       'Level progress',
                       style: TextStyle(
                         color: _textSecondary,
-                        fontSize: 11.5,
+                        // 'Level progress'
+                        fontSize: _f(AppFontSize.sm),
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1080,7 +1086,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                         'Level ${progress.currentLevel}',
                         style: TextStyle(
                           color: mode.color,
-                          fontSize: 10.5,
+                          fontSize: _f(AppFontSize.xs),
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -1094,7 +1100,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: _textPrimary,
-                    fontSize: 16,
+                    fontSize: _f(AppFontSize.xl),
                     letterSpacing: -0.4,
                     fontWeight: FontWeight.w900,
                   ),
@@ -1140,7 +1146,7 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                       : '$left levels to go',
                   style: TextStyle(
                     color: _textSecondary,
-                    fontSize: 10.5,
+                    fontSize: _f(AppFontSize.xs),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1238,8 +1244,8 @@ class _GameIntroScreenState extends State<GameIntroScreen>
                     buttonLabel,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16.5,
+                    style: TextStyle(
+                      fontSize: _f(AppFontSize.button),
                       letterSpacing: -0.2,
                       fontWeight: FontWeight.w900,
                     ),

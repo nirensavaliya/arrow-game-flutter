@@ -124,6 +124,13 @@ class RemoteConfigService {
     // ==================== Rewarded Ad - Continue ====================
     'continue_lives': 2,
     'ad_continue_time_fraction': 0.5,
+
+    // ==================== Master Arrow ====================
+// master_every_levels: a master arrow appears every N levels. 0 = disabled.
+    'master_every_levels': 5,
+    'master_bonus_min': 4,
+    'master_bonus_max': 5,
+
   };
 
   Future<void> initialize() async {
@@ -339,4 +346,21 @@ class RemoteConfigService {
       _double('ad_continue_time_fraction').clamp(0.05, 1.0).toDouble();
 
   Future<bool> fetchAndActivate() => _remoteConfig.fetchAndActivate();
+
+  // ==================== Master Arrow ====================
+
+  /// A master arrow appears every N levels. 0 turns the feature off.
+  int get masterEveryLevels =>
+      _int('master_every_levels').clamp(0, 999).toInt();
+
+  /// Minimum number of extra arrows a master arrow clears.
+  int get masterBonusMin =>
+      _int('master_bonus_min').clamp(1, 50).toInt();
+
+  /// Maximum number of extra arrows a master arrow clears.
+  /// Never lower than the minimum, even if Remote Config is set wrong.
+  int get masterBonusMax {
+    final max = _int('master_bonus_max').clamp(1, 50).toInt();
+    return max < masterBonusMin ? masterBonusMin : max;
+  }
 }

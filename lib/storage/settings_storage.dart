@@ -38,7 +38,7 @@ class SettingsStorage {
     if (!getSystemTapSoundEnabled()) return;
 
     try {
-      await SystemSound.play(SystemSoundType.tick);
+      await SystemSound.play(SystemSoundType.click);
     } catch (e) {
       debugPrint('System Tap Sound Error: $e');
     }

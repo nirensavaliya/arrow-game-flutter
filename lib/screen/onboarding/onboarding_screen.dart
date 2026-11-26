@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../constants/app_font_size.dart';
 import '../../controller/theme_controller.dart';
 import '../../services/ads/interstitial_ad_service.dart';
 import '../../storage/settings_storage.dart';
@@ -144,7 +145,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _finishOnboarding();
     }
   }
-
+  double _fs(double size) => AppFontSize.s(context, size);
   // ---------------------------------------------------------------------------
   // Main UI
   // ---------------------------------------------------------------------------
@@ -178,7 +179,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         backgroundColor: background,
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+            padding: const EdgeInsets.fromLTRB(20, 15, 20, 14),
             child: Column(
               children: [
                 // Header
@@ -285,7 +286,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 'Arrow Escape',
                 style: TextStyle(
                   color: textColor,
-                  fontSize: 19,
+                  fontSize: _fs(AppFontSize.title - 1),
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.6,
                 ),
@@ -294,7 +295,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 'THINK  •  TRACE  •  ESCAPE',
                 style: TextStyle(
                   color: secondaryColor,
-                  fontSize: 9,
+                  fontSize: _fs(AppFontSize.tiny - 0.5),
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.2,
                 ),
@@ -316,7 +317,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               'SKIP',
               style: TextStyle(
                 color: secondaryColor,
-                fontSize: 11,
+                fontSize: _fs(AppFontSize.xs + 0.5),
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1,
               ),
@@ -357,7 +358,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               data.title,
               style: TextStyle(
                 color: textColor,
-                fontSize: 36,
+                fontSize: _fs(36),
                 height: 1.10,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -1.5,
@@ -371,7 +372,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               data.subtitle,
               style: TextStyle(
                 color: secondaryColor,
-                fontSize: 14,
+                fontSize: _fs(AppFontSize.lg), // 14
                 height: 1.65,
                 fontWeight: FontWeight.w500,
               ),
@@ -509,7 +510,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     data.badge ?? 'GAME FEATURE',
                     style: TextStyle(
                       color: data.color,
-                      fontSize: 9,
+                      fontSize: _fs(AppFontSize.tiny - 0.5), // 9
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1,
                     ),
@@ -595,7 +596,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   data.featureTitle!,
                   style: TextStyle(
                     color: textColor,
-                    fontSize: 14,
+                    fontSize: _fs(AppFontSize.lg),
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -604,7 +605,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   data.featureDescription ?? '',
                   style: TextStyle(
                     color: secondaryColor,
-                    fontSize: 11,
+                    fontSize: _fs(AppFontSize.xs + 0.5),
                     height: 1.4,
                     fontWeight: FontWeight.w500,
                   ),
@@ -638,7 +639,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           'WHAT YOU GET',
           style: TextStyle(
             color: secondaryColor,
-            fontSize: 10,
+            fontSize: _fs(AppFontSize.xs - 0.5),
             fontWeight: FontWeight.w900,
             letterSpacing: 1.3,
           ),
@@ -665,7 +666,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     highlight,
                     style: TextStyle(
                       color: textColor,
-                      fontSize: 12,
+                      fontSize: _fs(12),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -693,7 +694,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           '0${_currentPage + 1} / 0${_pages.length}',
           style: TextStyle(
             color: secondaryColor,
-            fontSize: 12,
+            fontSize: _fs(12),
             fontWeight: FontWeight.w900,
             letterSpacing: 0.7,
           ),
@@ -718,7 +719,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           _currentPage == _pages.length - 1 ? 'READY' : 'NEXT',
           style: TextStyle(
             color: activeColor,
-            fontSize: 10,
+            fontSize: _fs(AppFontSize.xs - 0.5),
             fontWeight: FontWeight.w900,
             letterSpacing: 1,
           ),
@@ -770,11 +771,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      _currentPage == _pages.length - 1
-                          ? "LET'S PLAY"
-                          : 'CONTINUE',
-                      style: const TextStyle(
-                        fontSize: 14,
+                      _currentPage == _pages.length - 1 ? "LET'S PLAY" : 'CONTINUE',
+                      style: TextStyle(
+                        fontSize: _fs(AppFontSize.lg), // 14
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.4,
                       ),

@@ -5,9 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-import '../../controller/game_controller.dart';
+import '../../constants/app_font_size.dart';
 import '../../services/ads/ad_config.dart';
-import '../../services/ads/banner_ad_service.dart';
 import '../../services/ads/native_ad_service.dart';
 import '../../services/remote_config_service.dart';
 import 'level_design.dart';
@@ -365,13 +364,13 @@ class _LevelScreenState extends State<LevelScreen>
       setState(() {});
     }
   }
-
+  double _fs(double size) => AppFontSize.s(context, size);
   // ───────────────────────── Build ─────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final unlocked = _unlockedLevel;
-    final c = Get.find<GameController>();
+    // final c = Get.find<GameController>();
 
     return Scaffold(
       backgroundColor: _bg,
@@ -380,35 +379,38 @@ class _LevelScreenState extends State<LevelScreen>
           Positioned.fill(child: _buildBackground()),
           SafeArea(
             bottom: false,
-            child: Column(
-              children: [
-                FadeTransition(opacity: _headerFade, child: _topBar()),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: CustomScrollView(
-                    key: PageStorageKey<String>('levels-scroll-$_mode'),
-                    physics: const BouncingScrollPhysics(
-                      parent: AlwaysScrollableScrollPhysics(),
-                    ),
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: FadeTransition(
-                          opacity: _headerFade,
-                          child: _journeySummary(unlocked),
-                        ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0,15,0,0),
+              child: Column(
+                children: [
+                  FadeTransition(opacity: _headerFade, child: _topBar()),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: CustomScrollView(
+                      key: PageStorageKey<String>('levels-scroll-$_mode'),
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
                       ),
-                      const SliverToBoxAdapter(child: SizedBox(height: 18)),
-                      _segmentList(unlocked),
-                    ],
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: FadeTransition(
+                            opacity: _headerFade,
+                            child: _journeySummary(unlocked),
+                          ),
+                        ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 18)),
+                        _segmentList(unlocked),
+                      ],
+                    ),
                   ),
-                ),
-                // Banner ad at the very bottom
-                // if (c.canShowBanner)
-                //   const Padding(
-                //     padding: EdgeInsets.only(top: 0),
-                //     child: BannerAdService(),
-                //   ),
-              ],
+                  // Banner ad at the very bottom
+                  // if (c.canShowBanner)
+                  //   const Padding(
+                  //     padding: EdgeInsets.only(top: 0),
+                  //     child: BannerAdService(),
+                  //   ),
+                ],
+              ),
             ),
           ),
         ],
@@ -499,12 +501,11 @@ class _LevelScreenState extends State<LevelScreen>
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: _textPrimary,
-                    fontSize: 21,
+                    fontSize: _fs(AppFontSize.title), // 20 (was 21)
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.7,
                   ),
                 ),
-                const SizedBox(height: 2),
                 Row(
                   children: [
                     Icon(_modeIcon, size: 12, color: _modeColor),
@@ -516,7 +517,7 @@ class _LevelScreenState extends State<LevelScreen>
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: _textSecondary,
-                          fontSize: 11.5,
+                          fontSize: _fs(AppFontSize.sm), // 11.5
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,
                         ),
@@ -582,7 +583,7 @@ class _LevelScreenState extends State<LevelScreen>
             '$_totalStars',
             style: TextStyle(
               color: _textPrimary,
-              fontSize: 14,
+              fontSize: _fs(AppFontSize.lg), // 14
               letterSpacing: -0.2,
               fontWeight: FontWeight.w900,
             ),
@@ -691,11 +692,11 @@ class _LevelScreenState extends State<LevelScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Your adventure',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 18,
+                                  fontSize: _fs(AppFontSize.xl + 2), // 18
                                   letterSpacing: -0.5,
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -707,7 +708,7 @@ class _LevelScreenState extends State<LevelScreen>
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.86),
-                                  fontSize: 12,
+                                  fontSize: _fs(12),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -717,9 +718,9 @@ class _LevelScreenState extends State<LevelScreen>
                         const SizedBox(width: 8),
                         Text(
                           '${(progress * 100).round()}%',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 28,
+                            fontSize: _fs(AppFontSize.h2), // 28
                             letterSpacing: -1.2,
                             fontWeight: FontWeight.w900,
                           ),
@@ -799,9 +800,9 @@ class _LevelScreenState extends State<LevelScreen>
           const SizedBox(width: 5),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 11,
+              fontSize: _fs(AppFontSize.xs), // 10.5
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -991,7 +992,7 @@ class _LevelScreenState extends State<LevelScreen>
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: _textPrimary,
-                              fontSize: 16,
+                              fontSize: _fs(AppFontSize.xl),
                               fontWeight: FontWeight.w900,
                               letterSpacing: -0.5,
                               height: 1.15,
@@ -1004,7 +1005,7 @@ class _LevelScreenState extends State<LevelScreen>
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: _textSecondary,
-                              fontSize: 11.5,
+                              fontSize: _fs(AppFontSize.sm),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -1034,7 +1035,7 @@ class _LevelScreenState extends State<LevelScreen>
                         '${(progress * 100).round()}%',
                         style: TextStyle(
                           color: isUnlocked ? accent : muted,
-                          fontSize: 20,
+                          fontSize: 	_fs(AppFontSize.title),
                           fontWeight: FontWeight.w900,
                           letterSpacing: -0.8,
                         ),
@@ -1108,7 +1109,7 @@ class _LevelScreenState extends State<LevelScreen>
                         statusLabel,
                         style: TextStyle(
                           color: iconColor,
-                          fontSize: 10.5,
+                          fontSize: _fs(AppFontSize.xs),
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -1118,7 +1119,7 @@ class _LevelScreenState extends State<LevelScreen>
                       'Levels $start–$end',
                       style: TextStyle(
                         color: muted,
-                        fontSize: 11,
+                        fontSize: _fs(AppFontSize.xs + 0.5),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1263,16 +1264,15 @@ class _LevelScreenState extends State<LevelScreen>
                   'Complete Segment ${segment.number - 1}',
                   style: TextStyle(
                     color: _textPrimary,
-                    fontSize: 13,
+                    fontSize: _fs(AppFontSize.md), // 13
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 3),
                 Text(
                   'Levels $start–${_segmentEnd(segment.number)} unlock next.',
                   style: TextStyle(
                     color: _textSecondary,
-                    fontSize: 11,
+                    fontSize: _fs(AppFontSize.xs + 0.5), // 11
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -1358,21 +1358,21 @@ class _LevelScreenState extends State<LevelScreen>
                                 color: Colors.black.withValues(alpha: 0.22),
                                 borderRadius: BorderRadius.circular(7),
                               ),
-                              child: const Text(
-                                'Current',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 8.5,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
+                        child: Text(
+                          'Current',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: _fs(AppFontSize.tiny - 1), // 8.5
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
                             )
                           : Text(
                               'Level',
                               style: TextStyle(
                                 color: muted.withValues(alpha: 0.8),
-                                fontSize: 9,
+                                fontSize: _fs(AppFontSize.tiny), // 9.5
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -1413,7 +1413,7 @@ class _LevelScreenState extends State<LevelScreen>
                             : isCurrent
                             ? Colors.white
                             : _textPrimary,
-                        fontSize: 35,
+                        fontSize: _fs(35),
                         fontWeight: FontWeight.w900,
                         letterSpacing: -1.8,
                         height: 1,
@@ -1441,7 +1441,7 @@ class _LevelScreenState extends State<LevelScreen>
                             'Locked',
                             style: TextStyle(
                               color: muted,
-                              fontSize: 9,
+                              fontSize: _fs(AppFontSize.tiny), // 9.5
                               fontWeight: FontWeight.w700,
                             ),
                           ),

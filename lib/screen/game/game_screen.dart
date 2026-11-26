@@ -6,11 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:showcaseview/showcaseview.dart';
 
+import '../../constants/app_font_size.dart';
 import '../../controller/game_controller.dart';
 import '../../modes/game_mode.dart';
 import '../../painter/animated_dot_grid.dart';
 import '../../painter/grid_lines_painter.dart';
-import '../../painter/arrow_Painter.dart';
+import '../../painter/arrow_painter.dart';
 import '../../storage/game_storage.dart';
 import '../../storage/settings_storage.dart';
 import '../../services/ads/interstitial_ad_service.dart';
@@ -131,6 +132,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Worker? _wrongClicksWorker;
 
   Worker? _arrowsWorker;
+  Worker? _masterWorker;
   int _prevArrows = -1;
 
   late GameMode _mode;
@@ -266,11 +268,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       }
 
       ShowcaseView.get().startShowCase([
+        _kRestart,
         _kStatus,
         _kHint,
         _kGrid,
         _kZoom,
-        _kRestart,
       ]);
     });
   }
@@ -282,32 +284,84 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     required Widget child,
     bool circle = false,
     double radius = 20,
+    bool last = false, // last step shows "Got it" instead of "Next"
     TooltipPosition? position,
   }) {
+    // Text on the filled button: white on dark mode colors, dark on light ones.
+    final onMode = _modeDeep.computeLuminance() > 0.5
+        ? const Color(0xFF14162A)
+        : Colors.white;
+
     return Showcase(
       key: k,
       title: title,
       description: desc,
       tooltipPosition: position,
+
+      // Highlight shape around the target
       targetShapeBorder: circle
           ? const CircleBorder()
           : RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
+      targetPadding: const EdgeInsets.all(4),
+
+      // Dimmed backdrop (works in both themes)
+      overlayColor: _isDark ? Colors.black : const Color(0xFF14162A),
+      overlayOpacity: _isDark ? 0.78 : 0.62,
+
+      // Tooltip card (the arrow takes this color too)
       tooltipBackgroundColor: _surface,
+      tooltipBorderRadius: BorderRadius.circular(18),
+      tooltipPadding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       textColor: _textPrimary,
       titleTextStyle: TextStyle(
         color: _textPrimary,
-        fontSize: 16,
+        fontSize: _fs(AppFontSize.xl),
         fontWeight: FontWeight.w900,
+        letterSpacing: -0.2,
       ),
       descTextStyle: TextStyle(
         color: _textSecondary,
-        fontSize: 13,
+        fontSize: _fs(AppFontSize.md),
+        height: 1.35,
         fontWeight: FontWeight.w600,
       ),
-      tooltipActions: const [
-        TooltipActionButton(type: TooltipDefaultActionType.skip),
-        TooltipActionButton(type: TooltipDefaultActionType.next),
+
+      // Buttons
+      tooltipActions: [
+        if (!last)
+          TooltipActionButton(
+            type: TooltipDefaultActionType.skip,
+            name: 'Skip',
+            backgroundColor: _isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.06),
+            textStyle: TextStyle(
+              color: _textSecondary,
+              fontSize: _fs(12.5),
+              fontWeight: FontWeight.w800,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          ),
+        TooltipActionButton(
+          type: TooltipDefaultActionType.next,
+          name: last ? 'Got it' : 'Next',
+          backgroundColor: _modeColor,
+          textStyle: TextStyle(
+            color: onMode,
+            fontSize: _fs(12.5),
+            fontWeight: FontWeight.w900,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
       ],
+      tooltipActionConfig: const TooltipActionConfig(
+        alignment: MainAxisAlignment.end,
+        gapBetweenContentAndAction: 12,
+        actionGap: 8,
+      ),
+
       child: child,
     );
   }
@@ -632,9 +686,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
 
     final m = _tc.value.clone()
-      ..translate(focal.dx, focal.dy)
-      ..scale(applied)
-      ..translate(-focal.dx, -focal.dy);
+      ..translateByDouble(focal.dx, focal.dy, 0.0, 1.0)
+      ..scaleByDouble(applied, applied, applied, 1.0)
+      ..translateByDouble(-focal.dx, -focal.dy, 0.0, 1.0);
 
     // Keep the board covering the viewport (no empty edges).
     final s = m.getMaxScaleOnAxis();
@@ -873,6 +927,17 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       _prevArrows = c.arrows.length;
       _arrowsWorker = ever(c.arrows, (_) => _syncArrows(c));
 
+      _masterWorker = ever<int>(c.masterBonusEvent, (_) {
+        if (!mounted) return;
+        _showPop(
+          icon: Icons.auto_awesome_rounded,
+          emoji: '👑',
+          color: const Color(0xFFFFB300),
+          big: 'MASTER!',
+          label: '+${c.lastMasterBonusCount} BONUS CLEARS',
+        );
+      });
+
       void syncHintAnim() {
         if (c.hintArrow.value != null) {
           if (!_hintController.isAnimating) {
@@ -946,6 +1011,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _livesWorker?.dispose();
     _wrongClicksWorker?.dispose();
     _arrowsWorker?.dispose();
+    _masterWorker?.dispose();
     _shakeController.dispose();
     _drawController.dispose();
     _ambientController.dispose();
@@ -959,7 +1025,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     ShowcaseView.get().unregister();
     super.dispose();
   }
-
+  double _fs(double size) => AppFontSize.s(context, size);
   // ---------------------------------------------------------------------------
   // BUILD
   // ---------------------------------------------------------------------------
@@ -975,54 +1041,57 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           // Premium ambient background (maze texture + drifting mode glow)
           Positioned.fill(child: RepaintBoundary(child: _buildBackground())),
 
-          Column(
-            children: [
-              _enter(_topAnim, _topBar(c), dy: -14),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0,15,0,0),
+            child: Column(
+              children: [
+                _enter(_topAnim, _topBar(c), dy: -14),
 
-              Expanded(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 560),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 5),
-                        _enter(
-                          _statusAnim,
-                          _sc(
-                            k: _kStatus,
-                            radius: 24,
-                            title: 'Your progress',
-                            desc: 'See how many arrows are left, plus your hearts or timer.',
-                            child: _statusCard(c),
-                          ),
-                          dy: -10,
-                        ),
-                        const SizedBox(height: 5),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 5),
+                          _enter(
+                            _statusAnim,
+                            _sc(
+                              k: _kStatus,
+                              radius: 24,
+                              title: 'Your progress',
+                              desc: 'See how many arrows are left, plus your hearts or timer.',
+                              child: _statusCard(c),
                             ),
-                            child: _enter(
-                              _boardAnim,
-                              _boardCard(c),
-                              dy: 20,
-                              scale: 0.94,
+                            dy: -10,
+                          ),
+                          const SizedBox(height: 5),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: _enter(
+                                _boardAnim,
+                                _boardCard(c),
+                                dy: 20,
+                                scale: 0.94,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 5),
-                        _enter(_bottomAnim, _dock(c), dy: 20),
-                        const SizedBox(height: 5),
+                          const SizedBox(height: 5),
+                          _enter(_bottomAnim, _dock(c), dy: 20),
+                          const SizedBox(height: 5),
 
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
 
 
-            ],
+              ],
+            ),
           ),
 
           // Centered action pop (combo / milestone / wrong / hint)
@@ -1256,7 +1325,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               final showBadge = c.canShowRewarded;
               return _sc(
                 k: _kRestart,
-                circle: true,
                 title: 'Restart',
                 desc: 'Start the level over. Watch an ad to get more restarts.',
                 child: _GlassIconButton(
@@ -1330,7 +1398,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                             : '$coins',
                         style: TextStyle(
                           color: _textPrimary,
-                          fontSize: 13.5,
+                          fontSize:  _fs(13.5),
                           letterSpacing: -0.2,
                           fontWeight: FontWeight.w900,
                           fontFeatures: const [ui.FontFeature.tabularFigures()],
@@ -1364,15 +1432,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ).createShader(r),
             child: _AnimatedCount(
               value: 'LEVEL $level',
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: _fs(AppFontSize.xl + 2), // 18
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.8,
               ),
             ),
           ),
-          const SizedBox(height: 1),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),
             child: Text(
@@ -1383,7 +1450,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: _textSecondary,
-                fontSize: 11.5,
+                fontSize: _fs(AppFontSize.sm), // 11.5
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.2,
               ),
@@ -1484,7 +1551,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                 'Arrows',
                                 style: TextStyle(
                                   color: _textSecondary,
-                                  fontSize: 11.5,
+                                  fontSize: _fs(AppFontSize.sm),
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -1492,7 +1559,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                 '$left left',
                                 style: TextStyle(
                                   color: _textPrimary,
-                                  fontSize: 13.5,
+                                  fontSize: _fs(13.5),
                                   letterSpacing: -0.2,
                                   fontWeight: FontWeight.w900,
                                   fontFeatures: const [
@@ -1863,6 +1930,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             _sc(
               k: _kZoom,
               position: TooltipPosition.top,
+              last: true,            // <-- add this
               title: 'Zoom',
               desc: 'Zoom in or out on big boards.',
               child: Row(
@@ -2008,7 +2076,10 @@ class _ActionToastState extends State<_ActionToast>
 
     final iconBox = compact ? 40.0 : 64.0;
     final iconSize = compact ? 34.0 : 48.0;
-    final bigSize = compact ? 22.0 : (p.big.length > 4 ? 30.0 : 58.0);
+    final bigSize = AppFontSize.s(
+      context,
+      compact ? 22.0 : (p.big.length > 4 ? 30.0 : 58.0),
+    );
 
     return AnimatedBuilder(
       animation: _c,
@@ -2100,9 +2171,9 @@ class _ActionToastState extends State<_ActionToast>
             ),
             child: Text(
               p.label!,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 13,
+                fontSize: AppFontSize.s(context, 13),
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1.6,
                 decoration: TextDecoration.none,
@@ -2372,8 +2443,8 @@ class _ComboBannerState extends State<_ComboBanner>
                         scale: _iconScale.value,
                         child: Text(
                           m.emoji.replaceAll('\uFE0F', ''),
-                          style: const TextStyle(
-                            fontSize: 42,
+                          style: TextStyle(
+                            fontSize: AppFontSize.s(context, 42),
                             height: 1.05,
                             decoration: TextDecoration.none,
                           ),
@@ -2403,7 +2474,7 @@ class _ComboBannerState extends State<_ComboBanner>
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: accent,
-                                  fontSize: 24,
+                                  fontSize: AppFontSize.s(context, 24),
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 1.15,
                                   height: 1.05,
@@ -2429,7 +2500,7 @@ class _ComboBannerState extends State<_ComboBanner>
                                       : 'PERFECT MOVE',
                                   style: TextStyle(
                                     color: accent.withValues(alpha: 0.80),
-                                    fontSize: 10,
+                                    fontSize: AppFontSize.s(context, 10),
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 1.7,
                                     height: 1.1,
@@ -2463,7 +2534,7 @@ class _ComboBannerState extends State<_ComboBanner>
                                         'x${m.streak}',
                                         style: TextStyle(
                                           color: accent,
-                                          fontSize: 15,
+                                          fontSize: AppFontSize.s(context, 15),
                                           fontWeight: FontWeight.w900,
                                           letterSpacing: 0.4,
                                           height: 1.0,
@@ -2631,13 +2702,13 @@ class _CoinBurstState extends State<_CoinBurst>
                     scale: textIn,
                     child: Text(
                       '+${widget.data.coins}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 34,
+                        fontSize: AppFontSize.s(context, 34),
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2,
                         decoration: TextDecoration.none,
-                        shadows: [
+                        shadows: const [
                           Shadow(color: Color(0xFFFF9A00), blurRadius: 12),
                           Shadow(color: Colors.black38, blurRadius: 4),
                         ],
@@ -2867,7 +2938,7 @@ class _GlassIconButtonState extends State<_GlassIconButton> {
                     widget.badge!,
                     style: TextStyle(
                       color: badgeTextColor,
-                      fontSize: 9,
+                      fontSize: AppFontSize.s(context, 9),
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -2912,10 +2983,6 @@ class _DockButtonState extends State<_DockButton> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final badgeTextColor = widget.badgeColor.computeLuminance() > 0.5
-        ? Colors.black
-        : Colors.white;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) => _set(true),
@@ -2991,9 +3058,9 @@ class _DockButtonState extends State<_DockButton> {
                     ),
                     child: Text(
                       widget.badge!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 9,
+                        fontSize: AppFontSize.s(context, 9),
                         fontWeight: FontWeight.w900,
                       ),
                     ),

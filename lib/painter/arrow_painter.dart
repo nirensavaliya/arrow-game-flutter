@@ -1,3 +1,4 @@
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -80,6 +81,7 @@ class ArrowPainter extends CustomPainter {
     // Large, round corners (about 0.4 of a cell).
     final cornerRadius = cellSize * 0.40 * scale;
 
+
     // Draw-on entrance progress (1.0 = finished / disabled).
     final draw = appearance?.value ?? 1.0;
 
@@ -151,8 +153,12 @@ class ArrowPainter extends CustomPainter {
           ? (1.0 - ((arrow.progress - 0.55) / 0.45).clamp(0.0, 1.0)).toDouble()
           : 1.0;
 
+      final isMaster = arrow.isMaster && !arrow.isBlocked && !isClearing;
+
       final baseColor = arrow.isBlocked
           ? _blockedColor
+          : isMaster
+          ? const Color(0xFFFFB300)
           : (isClearing || isHint ? _hintColor : _arrowColor);
 
       _drawArrow(
@@ -167,6 +173,7 @@ class ArrowPainter extends CustomPainter {
         hint: isHint,
         hintT: hintT,
         cellSize: cellSize,
+        master: isMaster,
       );
     }
   }
@@ -212,7 +219,7 @@ class ArrowPainter extends CustomPainter {
         double headProgress = 1.0,
         bool hint = false,
         double hintT = 0.0,
-        double cellSize = 30,
+        double cellSize = 30, required bool master,
       }) {
     if (points.length < 2) return;
 
@@ -228,6 +235,19 @@ class ArrowPainter extends CustomPainter {
     if (body.length < 2) return;
 
     final path = _buildSmoothPath(body, cornerRadius);
+
+    if (master) {
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = const Color(0xFFFFB300).withValues(alpha: 0.35)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth * 2.6
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+      );
+    }
 
     final bodyPaint = Paint()
       ..color = color

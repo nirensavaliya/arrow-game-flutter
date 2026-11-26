@@ -16,6 +16,9 @@ class ArrowModel {
   /// Blocked animation progress: 0.0 to 1.0 and back to 0.0.
   final double bumpProgress;
 
+  final bool isMaster;
+
+
   const ArrowModel({
     required this.points,
     this.isActive = true,
@@ -24,6 +27,9 @@ class ArrowModel {
     this.progress = 0.0,
     this.bumpTravel = 0.0,
     this.bumpProgress = 0.0,
+    // constructor
+    this.isMaster = false,
+
   });
 
   Offset get start => points.isEmpty ? Offset.zero : points.first;
@@ -38,6 +44,8 @@ class ArrowModel {
     double? progress,
     double? bumpTravel,
     double? bumpProgress,
+    // copyWith: add the parameter and pass it through
+    bool? isMaster,
   }) {
     return ArrowModel(
       points: points ?? this.points,
@@ -47,6 +55,7 @@ class ArrowModel {
       progress: progress ?? this.progress,
       bumpTravel: bumpTravel ?? this.bumpTravel,
       bumpProgress: bumpProgress ?? this.bumpProgress,
+      isMaster: isMaster ?? this.isMaster,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
+import '../../constants/app_font_size.dart';
 import '../../services/remote_config_service.dart';
 import '../../services/vibration_service.dart';
 
@@ -195,7 +196,7 @@ class _ResultDialogState extends State<ResultDialog>
       curve: Interval(a, b, curve: curve),
     );
   }
-
+  double _fs(double size) => AppFontSize.s(context, size);
   @override
   Widget build(BuildContext context) {
     final won = widget.won;
@@ -332,9 +333,9 @@ class _ResultDialogState extends State<ResultDialog>
                   child: Text(
                     title.toUpperCase(),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: _fs(AppFontSize.title + 4), // 24
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.3,
                     ),
@@ -346,7 +347,7 @@ class _ResultDialogState extends State<ResultDialog>
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: _textSecondary,
-                    fontSize: 14.5,
+                    fontSize: _fs(AppFontSize.lg + 0.5), // 14.5
                     height: 1.4,
                     fontWeight: FontWeight.w600,
                   ),
@@ -523,10 +524,10 @@ class _ResultDialogState extends State<ResultDialog>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'LEVEL REWARD',
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: _fs(AppFontSize.xs - 0.5),
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.0,
                       color: _orange,
@@ -539,7 +540,7 @@ class _ResultDialogState extends State<ResultDialog>
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: _isDark ? Colors.white : const Color(0xFF252B3B),
-                      fontSize: 20,
+                      fontSize: _fs(AppFontSize.title),
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -554,7 +555,7 @@ class _ResultDialogState extends State<ResultDialog>
                   'BALANCE',
                   style: TextStyle(
                     color: _textSecondary,
-                    fontSize: 9,
+                    fontSize: _fs(AppFontSize.tiny - 0.5),
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.7,
                   ),
@@ -573,7 +574,7 @@ class _ResultDialogState extends State<ResultDialog>
                       '${widget.coinBalance}',
                       style: TextStyle(
                         color: _isDark ? Colors.white : const Color(0xFF252B3B),
-                        fontSize: 15,
+                        fontSize: _fs(15),
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -604,7 +605,7 @@ class _ResultDialogState extends State<ResultDialog>
             text,
             style: TextStyle(
               color: color,
-              fontSize: 13.5,
+              fontSize: _fs(13.5),
               fontWeight: FontWeight.w800,
               fontFeatures: const [ui.FontFeature.tabularFigures()],
             ),
@@ -677,7 +678,7 @@ class _ResultDialogState extends State<ResultDialog>
             angle: rot,
             child: Transform.scale(
               scale: t.clamp(0.0, 1.4),
-              child: const Text('💔', style: TextStyle(fontSize: 64)),
+              child: Text('💔', style: TextStyle(fontSize: _fs(64))),
             ),
           );
         },
@@ -779,9 +780,9 @@ class _GradientButtonState extends State<_GradientButton> {
                   widget.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 17,
+                    fontSize: AppFontSize.s(context, 17),
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.4,
                   ),
@@ -852,7 +853,7 @@ class _GlassButtonState extends State<_GlassButton> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: widget.color,
-                      fontSize: 15,
+                      fontSize: AppFontSize.s(context, 15),
                       fontWeight: FontWeight.w800,
                     ),
                   ),
